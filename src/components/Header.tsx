@@ -34,7 +34,7 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
         <div className="flex items-start gap-3 cursor-pointer pt-4" onClick={() => setView('home')}>
           <div className="flex items-center gap-2">
             <img 
-              src="images/favicon-logo.png" 
+              src="src/images/Header-Logo-SVG.svg"
               alt="CTN-ET Logo" 
               className="h-12 w-auto object-contain"
               onError={(e) => {

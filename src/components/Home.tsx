@@ -102,7 +102,7 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
          
             
             <div className="relative h-full hidden md:block">
-              <img src="images/header.jpg" alt="Clinical Trial Concept" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src="src/images/header.jpg" alt="Clinical Trial Concept" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           
           </div>
         </div>
