@@ -1,0 +1,620 @@
+import "dotenv/config";
+import express from "express";
+import { createServer as createViteServer } from "vite";
+import { Pool } from "pg";
+import path from "path";
+import { fileURLToPath } from "url";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const JWT_SECRET = process.env.JWT_SECRET || "ctn-et-secret-key-2026";
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required. Configure PostgreSQL in your environment.");
+}
+
+// Database Setup (PostgreSQL only)
+const db = new Pool({
+  connectionString: databaseUrl,
+  ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+});
+console.log("Using PostgreSQL database");
+
+const generateId = () => Math.random().toString(36).slice(2, 11);
+
+// Initialize Database Schema
+const schema = `
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    password_hash TEXT,
+    role TEXT DEFAULT 'USER',
+    must_change_password BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS volunteers (
+    id TEXT PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    date_of_birth TEXT NOT NULL,
+    sex TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    email TEXT,
+    national_id TEXT,
+    address TEXT,
+    chronic_illness BOOLEAN DEFAULT FALSE,
+    health_data JSONB,
+    consent_given BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS trials (
+    id TEXT PRIMARY KEY,
+    trial_number TEXT UNIQUE,
+    title TEXT NOT NULL,
+    phase TEXT,
+    status TEXT DEFAULT 'RECRUITING',
+    start_date TEXT,
+    end_date TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS news (
+    id TEXT PRIMARY KEY,
+    title_en TEXT NOT NULL,
+    title_am TEXT NOT NULL,
+    summary_en TEXT NOT NULL,
+    summary_am TEXT NOT NULL,
+    description_en TEXT,
+    description_am TEXT,
+    photos TEXT, -- JSON array of base64 or URLs
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS events (
+    id TEXT PRIMARY KEY,
+    title_en TEXT NOT NULL,
+    title_am TEXT NOT NULL,
+    summary_en TEXT NOT NULL,
+    summary_am TEXT NOT NULL,
+    description_en TEXT,
+    description_am TEXT,
+    photos TEXT, -- JSON array of base64 or URLs
+    start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS partners (
+    id TEXT PRIMARY KEY,
+    category TEXT NOT NULL, -- university, bank, others
+    name TEXT NOT NULL,
+    description TEXT,
+    image_url TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS contacts (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS partner_applications (
+    id TEXT PRIMARY KEY,
+    organization TEXT NOT NULL,
+    category TEXT NOT NULL,
+    other_category TEXT,
+    phone_number TEXT NOT NULL,
+    email TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    action TEXT NOT NULL,
+    entity TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
+async function initDb() {
+  await db.query(schema);
+
+  // Backward-compatible migration for older users table schemas.
+  const userColumnsResult = await db.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'users'`
+  );
+  const userColumns = new Set(userColumnsResult.rows.map((row: any) => row.column_name));
+
+  if (!userColumns.has("password")) {
+    await db.query(`ALTER TABLE users ADD COLUMN password TEXT`);
+  }
+  if (!userColumns.has("password_hash")) {
+    await db.query(`ALTER TABLE users ADD COLUMN password_hash TEXT`);
+  }
+  if (!userColumns.has("must_change_password")) {
+    await db.query(`ALTER TABLE users ADD COLUMN must_change_password BOOLEAN DEFAULT FALSE`);
+  }
+  if (userColumns.has("password_hash")) {
+    await db.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
+    await db.query(
+      `UPDATE users
+       SET password = COALESCE(password, password_hash)
+       WHERE password IS NULL AND password_hash IS NOT NULL`
+    );
+    await db.query(
+      `UPDATE users
+       SET password_hash = COALESCE(password_hash, password)
+       WHERE password IS NOT NULL`
+    );
+  }
+
+  // Backward-compatible migration for legacy news schema.
+  await db.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS title_en TEXT`);
+  await db.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS title_am TEXT`);
+  await db.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS summary_en TEXT`);
+  await db.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS summary_am TEXT`);
+  await db.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS description_en TEXT`);
+  await db.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS description_am TEXT`);
+  await db.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS photos TEXT`);
+
+  const newsColumnsResult = await db.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'news'`
+  );
+  const newsColumns = new Set(newsColumnsResult.rows.map((row: any) => row.column_name));
+
+  if (newsColumns.has("title")) {
+    await db.query(`ALTER TABLE news ALTER COLUMN title DROP NOT NULL`);
+    await db.query(
+      `UPDATE news
+       SET title_en = COALESCE(title_en, title),
+           title_am = COALESCE(title_am, title)
+       WHERE title IS NOT NULL`
+    );
+  }
+  if (newsColumns.has("content")) {
+    await db.query(`ALTER TABLE news ALTER COLUMN content DROP NOT NULL`);
+    await db.query(
+      `UPDATE news
+       SET summary_en = COALESCE(summary_en, content),
+           summary_am = COALESCE(summary_am, content),
+           description_en = COALESCE(description_en, content),
+           description_am = COALESCE(description_am, content)
+       WHERE content IS NOT NULL`
+    );
+  }
+  if (newsColumns.has("image_url")) {
+    await db.query(
+      `UPDATE news
+       SET photos = CASE
+         WHEN photos IS NULL OR photos = '' THEN json_build_array(image_url)::text
+         ELSE photos
+       END
+       WHERE image_url IS NOT NULL AND image_url <> ''`
+    );
+  }
+  await db.query(`UPDATE news SET photos = '[]' WHERE photos IS NULL OR photos = ''`);
+
+  // Ensure default admin accounts exist with correct credentials
+  const defaultAdmins = [
+    { id: "admin-001", email: "admin@ctn-et.org", password: "admin123" },
+    { id: "admin-002", email: "admin@gmail.com", password: "12345" },
+  ];
+
+  try {
+    for (const admin of defaultAdmins) {
+      const hashedPassword = await bcrypt.hash(admin.password, 10);
+      await db.query(
+        `INSERT INTO users (id, email, password, password_hash, role, must_change_password) 
+         VALUES ($1, $2, $3, $3, $4, $5) 
+         ON CONFLICT (email) DO UPDATE
+         SET password = $3, password_hash = $3, role = $4, must_change_password = $5`,
+        [admin.id, admin.email, hashedPassword, "ADMIN", false]
+      );
+    }
+    console.log("Admin credentials ensured: admin@ctn-et.org/admin123 and admin@gmail.com/12345");
+  } catch (e) {
+    console.error("Failed to ensure admin credentials:", e);
+  }
+}
+
+// Middleware for Admin Auth
+const authenticateAdmin = (req: any, res: any, next: any) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (decoded.role !== "ADMIN") return res.status(403).json({ error: "Forbidden" });
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  app.use(express.json({ limit: '10mb' }));
+
+  // API Routes
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
+  // Auth API
+  app.post("/api/auth/login", async (req, res) => {
+    const { email, password } = req.body;
+    try {
+      const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+      const user = result.rows[0];
+      const storedHash = user?.password || user?.password_hash;
+
+      if (!user || !storedHash || !(await bcrypt.compare(password, storedHash))) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "24h" });
+      res.json({ token, user: { id: user.id, email: user.email, role: user.role, must_change_password: user.must_change_password } });
+    } catch (error) {
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/signup", async (req, res) => {
+    const { email, password } = req.body;
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const id = generateId();
+      const query = `INSERT INTO users (id, email, password, password_hash, role) VALUES ($1, $2, $3, $3, $4)`;
+      const values = [id, email, hashedPassword, "USER"];
+
+      await db.query(query, values);
+      res.status(201).json({ message: "User created" });
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        return res.status(409).json({ error: "Email already exists" });
+      }
+      res.status(500).json({ error: "Signup failed" });
+    }
+  });
+
+  // Public Content API
+  app.get("/api/news", async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM news ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch news" });
+    }
+  });
+
+  app.get("/api/events", async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM events ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch events" });
+    }
+  });
+
+  app.get("/api/partners", async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM partners ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch partners" });
+    }
+  });
+
+  // Contact API
+  app.post("/api/contact", async (req, res) => {
+    const { name, email, subject, message } = req.body;
+    try {
+      const id = generateId();
+      const query = `INSERT INTO contacts (id, name, email, subject, message) VALUES ($1, $2, $3, $4, $5)`;
+      const values = [id, name, email, subject, message];
+
+      await db.query(query, values);
+      res.status(201).json({ message: "Message sent" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  app.post("/api/partner-applications", async (req, res) => {
+    const { organization, category, otherCategory, phoneNumber, email } = req.body;
+    const normalizedCategory = String(category || "").toLowerCase();
+    const normalizedOtherCategory = typeof otherCategory === "string" ? otherCategory.trim() : "";
+
+    if (!organization || !normalizedCategory || !phoneNumber || !email) {
+      return res.status(400).json({ error: "All required fields must be provided" });
+    }
+
+    if (!["bank", "university", "hospitals", "laboratories", "other"].includes(normalizedCategory)) {
+      return res.status(400).json({ error: "Invalid category" });
+    }
+
+    if (normalizedCategory === "other" && !normalizedOtherCategory) {
+      return res.status(400).json({ error: "Please specify the other category" });
+    }
+
+    try {
+      const id = generateId();
+      await db.query(
+        `INSERT INTO partner_applications (id, organization, category, other_category, phone_number, email)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, organization, normalizedCategory, normalizedOtherCategory || null, phoneNumber, email]
+      );
+      res.status(201).json({
+        message: "you have successfully applied to be a partner our staffs will contact you shortly",
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to submit partner application" });
+    }
+  });
+
+  // Admin CRUD API
+  app.post("/api/admin/news", authenticateAdmin, async (req, res) => {
+    const { title_en, title_am, summary_en, summary_am, description_en, description_am, photos } = req.body;
+    try {
+      const id = generateId();
+      const query = `INSERT INTO news (id, title_en, title_am, summary_en, summary_am, description_en, description_am, photos) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+      const values = [id, title_en, title_am, summary_en, summary_am, description_en, description_am, JSON.stringify(photos)];
+
+      await db.query(query, values);
+      res.status(201).json({ message: "News added" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to add news" });
+    }
+  });
+
+  app.delete("/api/admin/news/:id", authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query("DELETE FROM news WHERE id = $1", [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "News item not found" });
+      }
+      res.json({ message: "News deleted" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to delete news" });
+    }
+  });
+
+  app.post("/api/admin/events", authenticateAdmin, async (req, res) => {
+    const { title_en, title_am, summary_en, summary_am, description_en, description_am, photos, start_date, end_date } = req.body;
+    try {
+      const id = generateId();
+      const query = `INSERT INTO events (id, title_en, title_am, summary_en, summary_am, description_en, description_am, photos, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+      const values = [id, title_en, title_am, summary_en, summary_am, description_en, description_am, JSON.stringify(photos), start_date, end_date];
+
+      await db.query(query, values);
+      res.status(201).json({ message: "Event added" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to add event" });
+    }
+  });
+
+  app.delete("/api/admin/events/:id", authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query("DELETE FROM events WHERE id = $1", [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      res.json({ message: "Event deleted" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to delete event" });
+    }
+  });
+
+  app.post("/api/admin/partners", authenticateAdmin, async (req, res) => {
+    const { category, name, description, image_url } = req.body;
+    try {
+      const id = generateId();
+      const query = `INSERT INTO partners (id, category, name, description, image_url) VALUES ($1, $2, $3, $4, $5)`;
+      const values = [id, category, name, description, image_url];
+
+      await db.query(query, values);
+      res.status(201).json({ message: "Partner added" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to add partner" });
+    }
+  });
+
+  app.delete("/api/admin/partners/:id", authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query("DELETE FROM partners WHERE id = $1", [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Partner not found" });
+      }
+      res.json({ message: "Partner deleted" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to delete partner" });
+    }
+  });
+
+  app.get("/api/admin/contacts", authenticateAdmin, async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM contacts ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch contacts" });
+    }
+  });
+
+  app.get("/api/admin/partner-applications", authenticateAdmin, async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM partner_applications ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch partner applications" });
+    }
+  });
+
+  app.get("/api/admin/notifications", authenticateAdmin, async (req, res) => {
+    try {
+      const [contactResult, partnerResult] = await Promise.all([
+        db.query("SELECT * FROM contacts ORDER BY created_at DESC"),
+        db.query("SELECT * FROM partner_applications ORDER BY created_at DESC"),
+      ]);
+
+      const contacts = contactResult.rows;
+      const partnerApplications = partnerResult.rows;
+      const unreadCount =
+        contacts.filter((item: any) => !item.is_read).length +
+        partnerApplications.filter((item: any) => !item.is_read).length;
+
+      res.json({ contacts, partnerApplications, unreadCount });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/admin/admins", authenticateAdmin, async (req, res) => {
+    try {
+      const result = await db.query(
+        `SELECT id, email, role, must_change_password, created_at
+         FROM users
+         WHERE role = 'ADMIN'
+         ORDER BY created_at DESC`
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to fetch admins" });
+    }
+  });
+
+  app.post("/api/admin/add", authenticateAdmin, async (req, res) => {
+    const { email } = req.body;
+    try {
+      const password = Math.random().toString(36).slice(2, 10); // Generated password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const id = generateId();
+      const query = `INSERT INTO users (id, email, password, password_hash, role, must_change_password) VALUES ($1, $2, $3, $3, $4, $5)`;
+      const values = [id, email, hashedPassword, "ADMIN", true];
+
+      await db.query(query, values);
+      
+      // In a real app, send email here. For now, return it in response.
+      res.status(201).json({ message: "Admin added", generatedPassword: password });
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        return res.status(409).json({ error: "Admin with this email already exists" });
+      }
+      res.status(500).json({ error: error?.message || "Failed to add admin" });
+    }
+  });
+
+  app.post("/api/auth/update-password", async (req, res) => {
+    const { email, newPassword } = req.body;
+    try {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const query = `UPDATE users SET password = $1, password_hash = $1, must_change_password = $2 WHERE email = $3`;
+      const values = [hashedPassword, false, email];
+
+      await db.query(query, values);
+      res.json({ message: "Password updated" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update password" });
+    }
+  });
+
+  // Volunteers API
+  app.post("/api/volunteers", async (req, res) => {
+    const { id, full_name, date_of_birth, sex, phone_number, email, national_id, address, chronic_illness, health_data, consent_given } = req.body;
+    try {
+      const query = `
+        INSERT INTO volunteers (id, full_name, date_of_birth, sex, phone_number, email, national_id, address, chronic_illness, health_data, consent_given)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `;
+      const values = [
+        id,
+        full_name,
+        date_of_birth,
+        sex,
+        phone_number,
+        email,
+        national_id,
+        address,
+        Boolean(chronic_illness),
+        health_data ?? {},
+        Boolean(consent_given),
+      ];
+      
+      await db.query(query, values);
+      res.status(201).json({ message: "Volunteer registered successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to register volunteer" });
+    }
+  });
+
+  app.get("/api/volunteers/count", async (req, res) => {
+    try {
+      const result = await db.query("SELECT COUNT(*)::int AS count FROM volunteers");
+      res.json({ count: result.rows[0]?.count ?? 0 });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch count" });
+    }
+  });
+
+  // Trials API
+  app.get("/api/trials", async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM trials ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch trials" });
+    }
+  });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    app.use(express.static(path.join(__dirname, "dist")));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "dist", "index.html"));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+async function bootstrap() {
+  await initDb();
+  await startServer();
+}
+
+bootstrap().catch((error) => {
+  console.error("Server startup failed:", error);
+  process.exit(1);
+});

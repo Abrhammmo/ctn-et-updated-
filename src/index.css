@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-amharic: "Noto Sans Ethiopic", sans-serif;
+  
+  --color-primary: #1a2b4b;
+  --color-primary-dark: #111d33;
+  --color-secondary: #f97316;
+  --color-accent: #fb923c;
+  --color-trust-blue: #f8fafc;
+  --color-trust-green: #fff7ed;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+}
+
+.glass-panel {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+.btn-primary {
+  @apply bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl transition-all font-medium shadow-md active:scale-95;
+}
+
+.input-field {
+  @apply w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all;
+}
