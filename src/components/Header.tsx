@@ -31,7 +31,7 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 h-20 flex items-start justify-between">
+      <div className="max-w-7xl mx-auto px-4 h-20 flex items-start">
         <div className="flex items-start gap-3 cursor-pointer pt-4" onClick={() => setView('home')}>
           <div className="flex items-center gap-2">
             <img 
@@ -49,19 +49,20 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
             </div>
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-lg font-bold text-primary tracking-tight">CTN-ET</h1>
-            <p className="text-[8px] uppercase tracking-widest text-slate-500 font-semibold">Clinical Trial Network Ethiopia</p>
+            {/* <h1 className="text-lg font-bold text-primary tracking-tight">CTN-ET</h1> */}
+            {/* <p className="text-[8px] uppercase tracking-widest text-slate-500 font-semibold">Clinical Trial Network Ethiopia</p> */}
           </div>
         </div>
 
-        {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-1 pt-4">
-          <NavItem id="home" label={t.nav.home} icon={Globe} active={view === 'home'} />
-          <NavItem id="about" label={t.nav.about} icon={Info} active={view === 'about'} />
-          <NavItem id="services" label={t.nav.services} icon={Briefcase} active={view === 'services'} />
-          <NavItem id="partners" label={t.nav.partners} icon={Handshake} active={view === 'partners'} />
-          <NavItem id="news" label={t.nav.news} icon={Newspaper} active={view === 'news'} />
-          <NavItem id="contact" label={t.nav.contact} icon={Phone} active={view === 'contact'} />
+        <div className="ml-auto flex items-center gap-4 pt-4">
+          {/* Desktop Nav */}
+          <nav className="hidden lg:flex items-center gap-1">
+            <NavItem id="home" label={t.nav.home} icon={Globe} active={view === 'home'} />
+            <NavItem id="about" label={t.nav.about} icon={Info} active={view === 'about'} />
+            <NavItem id="services" label={t.nav.services} icon={Briefcase} active={view === 'services'} />
+            <NavItem id="partners" label={t.nav.partners} icon={Handshake} active={view === 'partners'} />
+            <NavItem id="news" label={t.nav.news} icon={Newspaper} active={view === 'news'} />
+            <NavItem id="contact" label={t.nav.contact} icon={Phone} active={view === 'contact'} />
           
           {user?.role === 'ADMIN' && (
             <div
@@ -162,9 +163,9 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
               </AnimatePresence>
             </div>
           )}
-        </nav>
+          </nav>
 
-        <div className="flex items-center gap-4 pt-4">
+          <div className="flex items-center gap-4">
           <button 
             onClick={() => setLang(lang === 'en' ? 'am' : 'en')}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-bold transition-all"
@@ -176,6 +177,7 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
           <button className="lg:hidden p-2 text-slate-600" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X /> : <Menu />}
           </button>
+          </div>
         </div>
       </div>
 

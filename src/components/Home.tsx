@@ -113,7 +113,7 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
           <div className="max-w-3xl">
             <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 mb-8">
               <img src={faviconLogo} alt="Logo" className="w-8 h-8" />
-              <span className="text-sm font-bold uppercase tracking-widest">National Research Network</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Clinical Trial Network Ethiopia</span>
             </motion.div>
             <motion.h2 initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className={`text-5xl md:text-7xl font-bold mb-8 leading-[1.1] ${lang === 'am' ? 'font-amharic' : ''}`}>
               {lang === 'en' ? 'Advancing Clinical Research in Ethiopia' : 'በኢትዮጵያ የክሊኒካል ምርምርን ማሳደግ'}
