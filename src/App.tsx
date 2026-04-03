@@ -40,7 +40,27 @@ export default function App() {
     
     const storedUser = localStorage.getItem('user');
     if (storedUser) setUser(JSON.parse(storedUser));
+
+    verifySession();
   }, []);
+
+  const verifySession = async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!res.ok) {
+        localStorage.removeItem('user');
+        setUser(null);
+        return;
+      }
+      const data = await res.json();
+      if (data?.user) {
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchTrials = async () => {
     try {
@@ -96,12 +116,50 @@ export default function App() {
     else setView('home');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async (reason?: 'inactive' | 'manual') => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      console.error(err);
+    }
     setUser(null);
     localStorage.removeItem('user');
-    localStorage.removeItem('token');
     setView('home');
+    if (reason === 'inactive') {
+      alert('You have been signed out due to 15 minutes of inactivity.');
+    }
   };
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+
+    const timeoutMs = 15 * 60 * 1000;
+    const pingIntervalMs = 60 * 1000;
+    let timeoutId: number | undefined;
+    let lastPing = 0;
+
+    const resetTimer = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        handleLogout('inactive');
+      }, timeoutMs);
+
+      const now = Date.now();
+      if (now - lastPing > pingIntervalMs) {
+        lastPing = now;
+        fetch('/api/auth/ping', { method: 'POST', credentials: 'include' }).catch(() => {});
+      }
+    };
+
+    const events: Array<keyof WindowEventMap> = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      events.forEach((event) => window.removeEventListener(event, resetTimer));
+    };
+  }, [user?.role]);
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-slate-50">

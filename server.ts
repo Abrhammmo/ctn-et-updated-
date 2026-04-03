@@ -3,15 +3,21 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import { Pool } from "pg";
 import path from "path";
+import { promises as fs } from "fs";
 import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { createHash, randomBytes } from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const JWT_SECRET = process.env.JWT_SECRET || "ctn-et-secret-key-2026";
 const databaseUrl = process.env.DATABASE_URL;
+const SESSION_COOKIE_NAME = "ctn_admin_session";
+const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
+const SESSION_DEBUG = process.env.SESSION_DEBUG === "true";
+const AUDIT_LOG_PATH =
+  process.env.AUDIT_LOG_PATH ||
+  path.resolve(process.cwd(), "logs", "ctn-et-audit-log.txt");
 
 if (!databaseUrl) {
   throw new Error("DATABASE_URL is required. Configure PostgreSQL in your environment.");
@@ -25,6 +31,51 @@ const db = new Pool({
 console.log("Using PostgreSQL database");
 
 const generateId = () => Math.random().toString(36).slice(2, 11);
+
+const getCookieOptions = (req?: any) => {
+  const forwardedProto = req?.headers?.["x-forwarded-proto"];
+  const isSecure = Boolean(req?.secure || forwardedProto === "https");
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isSecure,
+    maxAge: SESSION_IDLE_TIMEOUT_MS,
+    path: "/",
+  };
+};
+
+const getCookieClearOptions = (req?: any) => {
+  const { httpOnly, sameSite, secure, path } = getCookieOptions(req);
+  return { httpOnly, sameSite, secure, path };
+};
+
+const hashSessionId = (sessionId: string) =>
+  createHash("sha256").update(sessionId).digest("hex");
+
+const parseCookies = (cookieHeader?: string) => {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+  for (const part of cookieHeader.split(";")) {
+    const [name, ...rest] = part.trim().split("=");
+    if (!name) continue;
+    cookies[name] = decodeURIComponent(rest.join("="));
+  }
+  return cookies;
+};
+
+const debugSession = (...args: any[]) => {
+  if (SESSION_DEBUG) {
+    console.log("[session]", ...args);
+  }
+};
+
+let auditLogReady: Promise<void> | null = null;
+const ensureAuditLogDir = () => {
+  if (!auditLogReady) {
+    auditLogReady = fs.mkdir(path.dirname(AUDIT_LOG_PATH), { recursive: true });
+  }
+  return auditLogReady;
+};
 
 // Initialize Database Schema
 const schema = `
@@ -124,9 +175,20 @@ const schema = `
   CREATE TABLE IF NOT EXISTS audit_logs (
     id TEXT PRIMARY KEY,
     user_id TEXT,
+    user_email TEXT,
     action TEXT NOT NULL,
     entity TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS admin_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_email TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE
   );
 `;
 
@@ -212,6 +274,13 @@ async function initDb() {
   }
   await db.query(`UPDATE news SET photos = '[]' WHERE photos IS NULL OR photos = ''`);
 
+  await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_id TEXT`);
+  await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_email TEXT`);
+  await db.query(`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS user_email TEXT`);
+  await db.query(`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+  await db.query(`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP`);
+  await db.query(`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS revoked BOOLEAN DEFAULT FALSE`);
+
   // Ensure default admin accounts exist with correct credentials
   const defaultAdmins = [
     { id: "admin-001", email: "admin@ctn-et.org", password: "admin123" },
@@ -235,18 +304,121 @@ async function initDb() {
   }
 }
 
-// Middleware for Admin Auth
-const authenticateAdmin = (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Unauthorized" });
-
+const logAudit = async (params: { userId?: string; userEmail?: string; action: string; entity?: string }) => {
+  const { userId, userEmail, action, entity } = params;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    if (decoded.role !== "ADMIN") return res.status(403).json({ error: "Forbidden" });
-    req.user = decoded;
+    await db.query(
+      `INSERT INTO audit_logs (id, user_id, user_email, action, entity) VALUES ($1, $2, $3, $4, $5)`,
+      [generateId(), userId ?? null, userEmail ?? null, action, entity ?? null]
+    );
+    await ensureAuditLogDir();
+    const timestamp = new Date().toISOString();
+    const actor = userEmail || userId || "unknown-admin";
+    const target = entity ?? "-";
+    const line = `${timestamp} | ${actor} | ${action} | ${target}\n`;
+    await fs.appendFile(AUDIT_LOG_PATH, line, "utf8");
+  } catch (error) {
+    console.error("Failed to write audit log:", error);
+  }
+};
+
+const createSession = async (user: { id: string; email: string }) => {
+  const sessionId = randomBytes(32).toString("base64url");
+  const sessionHash = hashSessionId(sessionId);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS);
+  await db.query(
+    `INSERT INTO admin_sessions (id, user_id, user_email, created_at, last_activity, expires_at, revoked)
+     VALUES ($1, $2, $3, $4, $4, $5, FALSE)`,
+    [sessionHash, user.id, user.email, now, expiresAt]
+  );
+  debugSession("created", { userId: user.id, email: user.email });
+  return sessionId;
+};
+
+const revokeSession = async (sessionHash: string) => {
+  await db.query(`UPDATE admin_sessions SET revoked = TRUE WHERE id = $1`, [sessionHash]);
+};
+
+const loadSession = async (req: any, res: any) => {
+  const cookies = parseCookies(req.headers.cookie);
+  const rawSessionId = cookies[SESSION_COOKIE_NAME];
+  if (!rawSessionId) {
+    debugSession("missing cookie");
+    return null;
+  }
+
+  const sessionHash = hashSessionId(rawSessionId);
+  const result = await db.query(
+    `SELECT s.id, s.user_id, s.user_email, s.last_activity, s.revoked,
+            u.email AS account_email, u.role, u.must_change_password
+     FROM admin_sessions s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.id = $1`,
+    [sessionHash]
+  );
+  const session = result.rows[0];
+  if (!session) {
+    debugSession("not found");
+    return null;
+  }
+  if (session.revoked) {
+    debugSession("revoked", { userId: session.user_id, email: session.user_email || session.account_email });
+    return null;
+  }
+
+  const now = new Date();
+  const lastActivity = session.last_activity ? new Date(session.last_activity) : now;
+  if (now.getTime() - lastActivity.getTime() > SESSION_IDLE_TIMEOUT_MS) {
+    await revokeSession(sessionHash);
+    res.clearCookie(SESSION_COOKIE_NAME, getCookieClearOptions(req));
+    debugSession("expired", { userId: session.user_id, email: session.user_email || session.account_email });
+    return null;
+  }
+
+  const newExpiresAt = new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS);
+  await db.query(`UPDATE admin_sessions SET last_activity = $2, expires_at = $3 WHERE id = $1`, [
+    sessionHash,
+    now,
+    newExpiresAt,
+  ]);
+  res.cookie(SESSION_COOKIE_NAME, rawSessionId, getCookieOptions(req));
+  debugSession("ok", { userId: session.user_id, email: session.user_email || session.account_email });
+
+  return {
+    sessionHash,
+    user: {
+      id: session.user_id,
+      email: session.account_email,
+      role: session.role,
+      must_change_password: session.must_change_password,
+    },
+  };
+};
+
+// Session middleware
+const authenticateSession = async (req: any, res: any, next: any) => {
+  try {
+    const session = await loadSession(req, res);
+    if (!session) return res.status(401).json({ error: "Session expired" });
+    req.user = session.user;
+    req.session = session;
     next();
   } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
+    res.status(401).json({ error: "Unauthorized" });
+  }
+};
+
+const authenticateAdmin = async (req: any, res: any, next: any) => {
+  try {
+    const session = await loadSession(req, res);
+    if (!session) return res.status(401).json({ error: "Session expired" });
+    if (session.user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden" });
+    req.user = session.user;
+    req.session = session;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: "Unauthorized" });
   }
 };
 
@@ -254,6 +426,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.set("trust proxy", 1);
   app.use(express.json({ limit: '10mb' }));
 
   // API Routes
@@ -273,11 +446,40 @@ async function startServer() {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "24h" });
-      res.json({ token, user: { id: user.id, email: user.email, role: user.role, must_change_password: user.must_change_password } });
+      const sessionId = await createSession({ id: user.id, email: user.email });
+      res.cookie(SESSION_COOKIE_NAME, sessionId, getCookieOptions(req));
+
+      if (user.role === "ADMIN") {
+        await logAudit({ userId: user.id, userEmail: user.email, action: "ADMIN_SIGNIN", entity: "auth" });
+      }
+
+      res.json({ user: { id: user.id, email: user.email, role: user.role, must_change_password: user.must_change_password } });
     } catch (error) {
       res.status(500).json({ error: "Login failed" });
     }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      const session = await loadSession(req, res);
+      if (session?.sessionHash) {
+        await revokeSession(session.sessionHash);
+      }
+      if (session?.user?.role === "ADMIN") {
+        await logAudit({ userId: session.user.id, userEmail: session.user.email, action: "ADMIN_SIGNOUT", entity: "auth" });
+      }
+    } finally {
+      res.clearCookie(SESSION_COOKIE_NAME, getCookieClearOptions(req));
+      res.json({ message: "Signed out" });
+    }
+  });
+
+  app.get("/api/auth/me", authenticateSession, async (req, res) => {
+    res.json({ user: req.user });
+  });
+
+  app.post("/api/auth/ping", authenticateSession, async (req, res) => {
+    res.json({ status: "ok" });
   });
 
   app.post("/api/auth/signup", async (req, res) => {
@@ -382,6 +584,7 @@ async function startServer() {
       const values = [id, title_en, title_am, summary_en, summary_am, description_en, description_am, JSON.stringify(photos)];
 
       await db.query(query, values);
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "NEWS_CREATE", entity: `news:${id}` });
       res.status(201).json({ message: "News added" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to add news" });
@@ -395,6 +598,7 @@ async function startServer() {
       if (result.rowCount === 0) {
         return res.status(404).json({ error: "News item not found" });
       }
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "NEWS_DELETE", entity: `news:${id}` });
       res.json({ message: "News deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to delete news" });
@@ -409,6 +613,7 @@ async function startServer() {
       const values = [id, title_en, title_am, summary_en, summary_am, description_en, description_am, JSON.stringify(photos), start_date, end_date];
 
       await db.query(query, values);
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "EVENT_CREATE", entity: `event:${id}` });
       res.status(201).json({ message: "Event added" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to add event" });
@@ -422,6 +627,7 @@ async function startServer() {
       if (result.rowCount === 0) {
         return res.status(404).json({ error: "Event not found" });
       }
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "EVENT_DELETE", entity: `event:${id}` });
       res.json({ message: "Event deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to delete event" });
@@ -436,6 +642,7 @@ async function startServer() {
       const values = [id, category, name, description, image_url];
 
       await db.query(query, values);
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "PARTNER_CREATE", entity: `partner:${id}` });
       res.status(201).json({ message: "Partner added" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to add partner" });
@@ -449,6 +656,7 @@ async function startServer() {
       if (result.rowCount === 0) {
         return res.status(404).json({ error: "Partner not found" });
       }
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "PARTNER_DELETE", entity: `partner:${id}` });
       res.json({ message: "Partner deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to delete partner" });
@@ -516,6 +724,7 @@ async function startServer() {
       const values = [id, email, hashedPassword, "ADMIN", true];
 
       await db.query(query, values);
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "ADMIN_CREATE", entity: `admin:${email}` });
       
       // In a real app, send email here. For now, return it in response.
       res.status(201).json({ message: "Admin added", generatedPassword: password });
@@ -527,8 +736,14 @@ async function startServer() {
     }
   });
 
-  app.post("/api/auth/update-password", async (req, res) => {
+  app.post("/api/auth/update-password", authenticateSession, async (req, res) => {
     const { email, newPassword } = req.body;
+    if (!newPassword) {
+      return res.status(400).json({ error: "New password is required" });
+    }
+    if (req.user?.email !== email) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     try {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       const query = `UPDATE users SET password = $1, password_hash = $1, must_change_password = $2 WHERE email = $3`;

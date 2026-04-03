@@ -38,6 +38,7 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
@@ -46,9 +47,7 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
         if (mode === 'signin') {
           if (data.user.must_change_password) {
             setMustChangePassword(true);
-            localStorage.setItem('token', data.token);
           } else {
-            localStorage.setItem('token', data.token);
             onLogin(data.user);
           }
         } else {
@@ -72,12 +71,13 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
       const res = await fetch('/api/auth/update-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, newPassword })
       });
       if (res.ok) {
         alert('Password updated successfully! Please sign in again.');
         setMustChangePassword(false);
-        localStorage.removeItem('token');
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         setView('signin');
       }
     } catch (err) {

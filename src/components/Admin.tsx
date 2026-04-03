@@ -57,14 +57,26 @@ export default function Admin({ onLogout }: AdminProps) {
   const [adminForm, setAdminForm] = useState({ email: '' });
   const [generatedPassword, setGeneratedPassword] = useState('');
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('Your session has expired. Please sign in again.');
-    return { Authorization: `Bearer ${token}` };
+  const handleUnauthorized = () => {
+    alert('Your session has expired. Please sign in again.');
+    onLogout();
+  };
+
+  const fetchWithAuth = async (input: RequestInfo, init?: RequestInit) => {
+    const res = await fetch(input, {
+      ...init,
+      credentials: 'include',
+      headers: { ...(init?.headers || {}) },
+    });
+    if (res.status === 401) {
+      handleUnauthorized();
+      throw new Error('Session expired');
+    }
+    return res;
   };
 
   const fetchNotifications = async () => {
-    const res = await fetch('/api/admin/notifications', { headers: getAuthHeaders() });
+    const res = await fetchWithAuth('/api/admin/notifications');
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Failed to fetch notifications');
     setContacts(data.contacts || []);
@@ -88,7 +100,7 @@ export default function Admin({ onLogout }: AdminProps) {
         setPartners(await res.json());
       }
       if (activeTab === 'admins') {
-        const res = await fetch('/api/admin/admins', { headers: getAuthHeaders() });
+        const res = await fetchWithAuth('/api/admin/admins');
         const data = await res.json().catch(() => ([]));
         if (!res.ok) {
           throw new Error(data.error || 'Failed to fetch admins');
@@ -129,9 +141,9 @@ export default function Admin({ onLogout }: AdminProps) {
     e.preventDefault();
     if (!newsForm.photos.length) return alert('Please upload at least one photo for news.');
     try {
-      const res = await fetch('/api/admin/news', {
+      const res = await fetchWithAuth('/api/admin/news', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newsForm),
       });
       const data = await res.json().catch(() => ({}));
@@ -148,9 +160,9 @@ export default function Admin({ onLogout }: AdminProps) {
     e.preventDefault();
     if (!eventForm.photos.length) return alert('Please upload at least one photo for event.');
     try {
-      const res = await fetch('/api/admin/events', {
+      const res = await fetchWithAuth('/api/admin/events', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(eventForm),
       });
       const data = await res.json().catch(() => ({}));
@@ -167,9 +179,9 @@ export default function Admin({ onLogout }: AdminProps) {
     e.preventDefault();
     if (!partnerForm.image_url) return alert('Please upload a logo/image for the partner.');
     try {
-      const res = await fetch('/api/admin/partners', {
+      const res = await fetchWithAuth('/api/admin/partners', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(partnerForm),
       });
       const data = await res.json().catch(() => ({}));
@@ -185,9 +197,8 @@ export default function Admin({ onLogout }: AdminProps) {
   const deletePartner = async (id: string) => {
     if (!confirm('Delete this partner?')) return;
     try {
-      const res = await fetch(`/api/admin/partners/${id}`, {
+      const res = await fetchWithAuth(`/api/admin/partners/${id}`, {
         method: 'DELETE',
-        headers: { ...getAuthHeaders() },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to delete partner');
@@ -200,9 +211,9 @@ export default function Admin({ onLogout }: AdminProps) {
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/add', {
+      const res = await fetchWithAuth('/api/admin/add', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(adminForm),
       });
       const data = await res.json().catch(() => ({}));
@@ -218,9 +229,8 @@ export default function Admin({ onLogout }: AdminProps) {
   const deleteNews = async (id: string) => {
     if (!confirm('Delete this news item?')) return;
     try {
-      const res = await fetch(`/api/admin/news/${id}`, {
+      const res = await fetchWithAuth(`/api/admin/news/${id}`, {
         method: 'DELETE',
-        headers: { ...getAuthHeaders() },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to delete news');
@@ -233,9 +243,8 @@ export default function Admin({ onLogout }: AdminProps) {
   const deleteEvent = async (id: string) => {
     if (!confirm('Delete this event?')) return;
     try {
-      const res = await fetch(`/api/admin/events/${id}`, {
+      const res = await fetchWithAuth(`/api/admin/events/${id}`, {
         method: 'DELETE',
-        headers: { ...getAuthHeaders() },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to delete event');
