@@ -125,9 +125,9 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('user');
     setView('home');
-    if (reason === 'inactive') {
-      alert('You have been signed out due to 15 minutes of inactivity.');
-    }
+    // if (reason === 'inactive') {
+    //   alert('You have been signed out due to 15 minutes of inactivity.');
+    // }
   };
 
   useEffect(() => {
