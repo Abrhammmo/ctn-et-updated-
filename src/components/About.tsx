@@ -160,7 +160,7 @@ export default function About({ lang, t }: AboutProps) {
           <img
             src={aboutPageImage}
             alt="CTN-ET collaboration"
-            className="relative w-full rounded-[2rem] object-cover shadow-2xl border border-slate-200 sm:min-h-[320px]"
+            className="relative w-full rounded-[0.5rem] object-cover shadow-2xl border border-slate-200 sm:min-h-[320px]"
           />
         </div>
       </header>
