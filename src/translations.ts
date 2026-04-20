@@ -127,7 +127,7 @@ export const translations = {
       address: "AHRI, Addis Ababa, Ethiopia",
       website: "ahri.gov.et",
       phone: "011 348 3752",
-      email: "mekonnen.teferi@ahri.gov.et"
+      email: "contact@ctnet.org"
     },
     volunteer: {
       title: "Volunteer Registration",
@@ -279,7 +279,7 @@ export const translations = {
       address: "አርማወር ሀንሰን፣ አዲስ አበባ፣ ኢትዮጵያ",
       website: "ahri.gov.et",
       phone: "011 348 3752",
-      email: "mekonnen.teferi@ahri.gov.et"
+      email: "contact@ctnet.org"
     },
     volunteer: {
       title: "የበጎ ፈቃደኞች ምዝገባ",
