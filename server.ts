@@ -151,6 +151,19 @@ const schema = `
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS team_members (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    member_title TEXT NOT NULL,
+    position_role TEXT NOT NULL,
+    description TEXT NOT NULL,
+    photo_url TEXT NOT NULL,
+    facebook_url TEXT,
+    x_url TEXT,
+    youtube_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS contacts (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -273,6 +286,16 @@ async function initDb() {
     );
   }
   await db.query(`UPDATE news SET photos = '[]' WHERE photos IS NULL OR photos = ''`);
+
+  // Team members table compatibility.
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS name TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS member_title TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS position_role TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS description TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS photo_url TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS facebook_url TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS x_url TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS youtube_url TEXT`);
 
   await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_id TEXT`);
   await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_email TEXT`);
@@ -528,6 +551,15 @@ async function startServer() {
     }
   });
 
+  app.get("/api/team-members", async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM team_members ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch team members" });
+    }
+  });
+
   // Contact API
   app.post("/api/contact", async (req, res) => {
     const { name, email, subject, message } = req.body;
@@ -660,6 +692,72 @@ async function startServer() {
       res.json({ message: "Partner deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to delete partner" });
+    }
+  });
+
+  app.post("/api/admin/team-members", authenticateAdmin, async (req, res) => {
+    const { name, member_title, position_role, description, photo_url, facebook_url, x_url, youtube_url } = req.body;
+    const trimmedName = typeof name === "string" ? name.trim() : "";
+    const trimmedMemberTitle = typeof member_title === "string" ? member_title.trim() : "";
+    const trimmedPositionRole = typeof position_role === "string" ? position_role.trim() : "";
+    const trimmedDescription = typeof description === "string" ? description.trim() : "";
+    const trimmedPhoto = typeof photo_url === "string" ? photo_url.trim() : "";
+    const trimmedFacebookUrl = typeof facebook_url === "string" ? facebook_url.trim() : "";
+    const trimmedXUrl = typeof x_url === "string" ? x_url.trim() : "";
+    const trimmedYoutubeUrl = typeof youtube_url === "string" ? youtube_url.trim() : "";
+
+    if (!trimmedName || !trimmedMemberTitle || !trimmedPositionRole || !trimmedDescription || !trimmedPhoto) {
+      return res.status(400).json({
+        error: "name, member_title, position_role, description and photo_url are required",
+      });
+    }
+
+    try {
+      const id = generateId();
+      await db.query(
+        `INSERT INTO team_members (
+          id, name, member_title, position_role, description, photo_url, facebook_url, x_url, youtube_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          id,
+          trimmedName,
+          trimmedMemberTitle,
+          trimmedPositionRole,
+          trimmedDescription,
+          trimmedPhoto,
+          trimmedFacebookUrl || null,
+          trimmedXUrl || null,
+          trimmedYoutubeUrl || null,
+        ]
+      );
+      await logAudit({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        action: "TEAM_MEMBER_CREATE",
+        entity: `team-member:${id}`,
+      });
+      res.status(201).json({ message: "CTNET team member added", id });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to add team member" });
+    }
+  });
+
+  app.delete("/api/admin/team-members/:id", authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query("DELETE FROM team_members WHERE id = $1", [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      await logAudit({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        action: "TEAM_MEMBER_DELETE",
+        entity: `team-member:${id}`,
+      });
+      res.json({ message: "Team member deleted" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to delete team member" });
     }
   });
 

@@ -53,6 +53,7 @@ export default function Footer({ lang, t, setView }: FooterProps) {
             <h4 className="font-bold text-slate-900 mb-6 uppercase tracking-widest text-xs">Quick Links</h4>
             <ul className="space-y-4 text-slate-500 font-medium">
               <li><button onClick={() => setView('about')} className="hover:text-primary transition-all">{t.nav.about}</button></li>
+              <li><button onClick={() => setView('team')} className="hover:text-primary transition-all">CTNET TEAM</button></li>
               <li><button onClick={() => setView('services')} className="hover:text-primary transition-all">{t.nav.services}</button></li>
               <li><button onClick={() => setView('partners')} className="hover:text-primary transition-all">{t.nav.partners}</button></li>
               <li><button onClick={() => setView('news')} className="hover:text-primary transition-all">{t.nav.news}</button></li>

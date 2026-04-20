@@ -25,4 +25,17 @@ export interface ClinicalTrial {
   created_at?: string;
 }
 
+export interface TeamMember {
+  id: string;
+  name: string;
+  member_title: string;
+  position_role: string;
+  description: string;
+  photo_url: string;
+  facebook_url?: string | null;
+  x_url?: string | null;
+  youtube_url?: string | null;
+  created_at?: string;
+}
+
 export type Language = 'en' | 'am';

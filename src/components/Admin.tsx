@@ -17,12 +17,13 @@ import {
   ShieldAlert,
   Handshake,
 } from 'lucide-react';
-import { Language } from '../types';
+import { Language, TeamMember } from '../types';
 
 interface AdminProps {
   lang: Language;
   t: any;
   onLogout: () => void;
+  onTeamMembersChanged: () => void;
 }
 
 const toDataUrl = (file: File) =>
@@ -33,14 +34,15 @@ const toDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
-export default function Admin({ onLogout }: AdminProps) {
-  const [activeTab, setActiveTab] = useState<'news' | 'events' | 'partners' | 'people' | 'admins'>('news');
+export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
+  const [activeTab, setActiveTab] = useState<'news' | 'events' | 'partners' | 'team' | 'people' | 'admins'>('news');
   const [loading, setLoading] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
 
   const [news, setNews] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [partnerApplications, setPartnerApplications] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -53,6 +55,16 @@ export default function Admin({ onLogout }: AdminProps) {
   });
   const [partnerForm, setPartnerForm] = useState({
     category: 'university', name: '', description: '', image_url: ''
+  });
+  const [teamForm, setTeamForm] = useState({
+    name: '',
+    member_title: '',
+    position_role: '',
+    description: '',
+    photo_url: '',
+    facebook_url: '',
+    x_url: '',
+    youtube_url: '',
   });
   const [adminForm, setAdminForm] = useState({ email: '' });
   const [generatedPassword, setGeneratedPassword] = useState('');
@@ -99,6 +111,11 @@ export default function Admin({ onLogout }: AdminProps) {
         const res = await fetch('/api/partners');
         setPartners(await res.json());
       }
+      if (activeTab === 'team') {
+        const res = await fetch('/api/team-members');
+        const data = await res.json().catch(() => ([]));
+        setTeamMembers(Array.isArray(data) ? data : []);
+      }
       if (activeTab === 'admins') {
         const res = await fetchWithAuth('/api/admin/admins');
         const data = await res.json().catch(() => ([]));
@@ -135,6 +152,13 @@ export default function Admin({ onLogout }: AdminProps) {
     if (!file) return;
     const image = await toDataUrl(file);
     setPartnerForm(prev => ({ ...prev, image_url: image }));
+  };
+
+  const handleTeamPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const image = await toDataUrl(file);
+    setTeamForm(prev => ({ ...prev, photo_url: image }));
   };
 
   const submitNews = async (e: React.FormEvent) => {
@@ -194,6 +218,35 @@ export default function Admin({ onLogout }: AdminProps) {
     }
   };
 
+  const submitTeamMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamForm.photo_url) return alert('Please upload one portrait photo for this team member.');
+    try {
+      const res = await fetchWithAuth('/api/admin/team-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teamForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to add CTNET member');
+      alert('CTNET member added successfully');
+      setTeamForm({
+        name: '',
+        member_title: '',
+        position_role: '',
+        description: '',
+        photo_url: '',
+        facebook_url: '',
+        x_url: '',
+        youtube_url: '',
+      });
+      await fetchData();
+      onTeamMembersChanged();
+    } catch (error: any) {
+      alert(error?.message || 'Failed to add CTNET member');
+    }
+  };
+
   const deletePartner = async (id: string) => {
     if (!confirm('Delete this partner?')) return;
     try {
@@ -205,6 +258,21 @@ export default function Admin({ onLogout }: AdminProps) {
       await fetchData();
     } catch (error: any) {
       alert(error?.message || 'Failed to delete partner');
+    }
+  };
+
+  const deleteTeamMember = async (id: string) => {
+    if (!confirm('Delete this CTNET member?')) return;
+    try {
+      const res = await fetchWithAuth(`/api/admin/team-members/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to delete CTNET member');
+      await fetchData();
+      onTeamMembersChanged();
+    } catch (error: any) {
+      alert(error?.message || 'Failed to delete CTNET member');
     }
   };
 
@@ -254,6 +322,15 @@ export default function Admin({ onLogout }: AdminProps) {
     }
   };
 
+  const tabHeadingLabels: Record<typeof activeTab, string> = {
+    news: 'News',
+    events: 'Events',
+    partners: 'Partners',
+    team: 'CTNET Team',
+    people: 'People',
+    admins: 'Admins',
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <div className="w-64 min-w-[16rem] max-w-[16rem] shrink-0 h-screen sticky top-0 bg-primary text-white flex flex-col">
@@ -266,7 +343,8 @@ export default function Admin({ onLogout }: AdminProps) {
         <nav className="flex-grow p-4 space-y-2">
           <button type="button" onClick={() => setActiveTab('news')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'news' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Newspaper size={20} />News</button>
           <button type="button" onClick={() => setActiveTab('events')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'events' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Calendar size={20} />Events</button>
-          <button type="button" onClick={() => setActiveTab('partners')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'partners' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Users size={20} />Partners</button>
+          <button type="button" onClick={() => setActiveTab('partners')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'partners' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Handshake size={20} />Partners</button>
+          <button type="button" onClick={() => setActiveTab('team')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'team' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Users size={20} />Add CTNET Member</button>
           <button type="button" onClick={() => setActiveTab('people')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl relative ${activeTab === 'people' ? 'bg-white/20' : 'hover:bg-white/10'}`}>
             <Mail size={20} />
             People
@@ -281,7 +359,7 @@ export default function Admin({ onLogout }: AdminProps) {
 
       <div className="flex-grow overflow-y-auto p-8">
         <header className="mb-8 flex justify-between items-center">
-          <h2 className="text-3xl font-bold text-slate-900 capitalize">{activeTab} Management</h2>
+          <h2 className="text-3xl font-bold text-slate-900">{tabHeadingLabels[activeTab]} Management</h2>
           <div className="relative">
             <Bell size={24} className="text-slate-400" />
             {notificationCount > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-secondary rounded-full border-2 border-white" />}
@@ -438,6 +516,102 @@ export default function Admin({ onLogout }: AdminProps) {
                     </button>
                   </div>
                   {p.description && <p className="text-sm text-slate-600 mt-3">{p.description}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'team' && (
+          <div className="space-y-8">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <Plus size={20} className="text-primary" />
+                Add CTNET Member
+              </h3>
+              <form onSubmit={submitTeamMember} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <input
+                  required
+                  value={teamForm.name}
+                  onChange={e => setTeamForm({ ...teamForm, name: e.target.value })}
+                  placeholder="Full Name"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+                <input
+                  required
+                  value={teamForm.member_title}
+                  onChange={e => setTeamForm({ ...teamForm, member_title: e.target.value })}
+                  placeholder="Member Title (Doctor, Professor...)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+                <input
+                  required
+                  value={teamForm.position_role}
+                  onChange={e => setTeamForm({ ...teamForm, position_role: e.target.value })}
+                  placeholder="Position / Role (Director General...)"
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+                <textarea
+                  required
+                  value={teamForm.description}
+                  onChange={e => setTeamForm({ ...teamForm, description: e.target.value })}
+                  placeholder="Description about the individual"
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 h-32"
+                />
+                <input
+                  value={teamForm.facebook_url}
+                  onChange={e => setTeamForm({ ...teamForm, facebook_url: e.target.value })}
+                  placeholder="Facebook URL (optional)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+                <input
+                  value={teamForm.x_url}
+                  onChange={e => setTeamForm({ ...teamForm, x_url: e.target.value })}
+                  placeholder="X URL (optional)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+                <input
+                  value={teamForm.youtube_url}
+                  onChange={e => setTeamForm({ ...teamForm, youtube_url: e.target.value })}
+                  placeholder="YouTube URL (optional)"
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+
+                <div className="md:col-span-2 flex items-center gap-4">
+                  {teamForm.photo_url && (
+                    <img src={teamForm.photo_url} className="w-16 h-16 object-cover rounded-lg border" />
+                  )}
+                  <label className="flex-grow px-4 py-3 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 cursor-pointer">
+                    <ImageIcon size={20} className="mr-2" />
+                    <span className="text-sm font-bold">Upload Portrait Photo</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleTeamPhoto} />
+                  </label>
+                </div>
+                <button type="submit" className="md:col-span-2 bg-primary text-white py-4 rounded-2xl font-bold">Save CTNET Member</button>
+              </form>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {teamMembers.map(member => (
+                <div key={member.id} className="bg-white p-4 rounded-2xl border">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img src={member.photo_url} className="w-12 h-12 object-cover rounded-lg shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-bold truncate">{member.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{member.member_title}</p>
+                        <p className="text-xs text-slate-400 truncate">{member.position_role}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteTeamMember(member.id)}
+                      className="shrink-0 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-sm font-semibold"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-3 line-clamp-3">{member.description}</p>
                 </div>
               ))}
             </div>

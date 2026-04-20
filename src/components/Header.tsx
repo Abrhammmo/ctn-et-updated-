@@ -18,10 +18,25 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRegOpen, setIsRegOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isMobileAboutOpen, setIsMobileAboutOpen] = useState(false);
+
+  const closeMenus = () => {
+    setIsMenuOpen(false);
+    setIsRegOpen(false);
+    setIsAdminOpen(false);
+    setIsAboutOpen(false);
+    setIsMobileAboutOpen(false);
+  };
+
+  const handleViewChange = (nextView: string) => {
+    setView(nextView);
+    closeMenus();
+  };
 
   const NavItem = ({ id, label, icon: Icon, active }: { id: string, label: string, icon: any, active: boolean }) => (
     <button 
-      onClick={() => { setView(id); setIsMenuOpen(false); setIsRegOpen(false); setIsAdminOpen(false); }}
+      onClick={() => handleViewChange(id)}
       className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${active ? 'bg-primary text-white shadow-md' : 'hover:bg-slate-100 text-slate-600'}`}
     >
       <Icon size={16} />
@@ -29,10 +44,12 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
     </button>
   );
 
+  const isAboutActive = view === 'about' || view === 'team';
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 h-20 flex items-start">
-        <div className="flex items-start gap-3 cursor-pointer pt-4" onClick={() => setView('home')}>
+        <div className="flex items-start gap-3 cursor-pointer pt-4" onClick={() => handleViewChange('home')}>
           <div className="flex items-center gap-2">
             <img 
               src={headerLogo}
@@ -58,7 +75,48 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-1">
             <NavItem id="home" label={t.nav.home} icon={Globe} active={view === 'home'} />
-            <NavItem id="about" label={t.nav.about} icon={Info} active={view === 'about'} />
+            <div
+              className="relative"
+              onMouseEnter={() => setIsAboutOpen(true)}
+              onMouseLeave={() => setIsAboutOpen(false)}
+            >
+              <button
+                onClick={() => {
+                  setIsAboutOpen(!isAboutOpen);
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${(isAboutActive || isAboutOpen) ? 'bg-primary text-white shadow-md' : 'hover:bg-slate-100 text-slate-600'}`}
+              >
+                <Info size={16} />
+                <span className={lang === 'am' ? 'font-amharic' : ''}>{t.nav.about}</span>
+                <ChevronDown size={14} className={`transition-transform ${isAboutOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {isAboutOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 overflow-hidden z-50"
+                  >
+                    <button
+                      onClick={() => handleViewChange('about')}
+                      className={`w-full text-left flex items-center gap-3 p-3 rounded-xl transition-all ${(view === 'about') ? 'bg-primary/10 text-primary' : 'hover:bg-slate-50 text-slate-600'}`}
+                    >
+                      <Info size={18} />
+                      <span className={lang === 'am' ? 'font-amharic text-sm' : 'text-sm font-medium'}>About CTNET</span>
+                    </button>
+                    <button
+                      onClick={() => handleViewChange('team')}
+                      className={`w-full text-left flex items-center gap-3 p-3 rounded-xl transition-all ${(view === 'team') ? 'bg-primary/10 text-primary' : 'hover:bg-slate-50 text-slate-600'}`}
+                    >
+                      <Users size={18} />
+                      <span className={lang === 'am' ? 'font-amharic text-sm' : 'text-sm font-medium'}>CTNET TEAM</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <NavItem id="services" label={t.nav.services} icon={Briefcase} active={view === 'services'} />
             <NavItem id="partners" label={t.nav.partners} icon={Handshake} active={view === 'partners'} />
             <NavItem id="news" label={t.nav.news} icon={Newspaper} active={view === 'news'} />
@@ -72,8 +130,7 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
             >
               <button
                 onClick={() => {
-                  setView('admin');
-                  setIsMenuOpen(false);
+                  handleViewChange('admin');
                 }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${(view === 'admin' || isAdminOpen) ? 'bg-primary text-white shadow-md' : 'hover:bg-slate-100 text-slate-600'}`}
               >
@@ -97,7 +154,7 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
                     <button
                       onClick={() => {
                         onLogout();
-                        setIsAdminOpen(false);
+                        closeMenus();
                       }}
                       className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-red-600 transition-all"
                     >
@@ -135,14 +192,14 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
                     {!user ? (
                       <>
                         <button 
-                          onClick={() => { setView('signin'); setIsRegOpen(false); }}
+                          onClick={() => { handleViewChange('signin'); }}
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-slate-600 transition-all"
                         >
                           <Users size={18} className="text-primary" />
                           <span className={lang === 'am' ? 'font-amharic text-sm' : 'text-sm font-medium'}>{t.nav.signin}</span>
                         </button>
                         <button 
-                          onClick={() => { setView('signup'); setIsRegOpen(false); }}
+                          onClick={() => { handleViewChange('signup'); }}
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-slate-600 transition-all"
                         >
                           <ClipboardList size={18} className="text-primary" />
@@ -151,7 +208,7 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
                       </>
                     ) : (
                       <button 
-                        onClick={() => { onLogout(); setIsRegOpen(false); }}
+                        onClick={() => { onLogout(); closeMenus(); }}
                         className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-red-600 transition-all"
                       >
                         <X size={18} />
@@ -174,7 +231,13 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
             {lang === 'en' ? 'አማርኛ' : 'EN'}
           </button>
 
-          <button className="lg:hidden p-2 text-slate-600" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button
+            className="lg:hidden p-2 text-slate-600"
+            onClick={() => {
+              if (isMenuOpen) setIsMobileAboutOpen(false);
+              setIsMenuOpen(!isMenuOpen);
+            }}
+          >
             {isMenuOpen ? <X /> : <Menu />}
           </button>
           </div>
@@ -192,7 +255,41 @@ export default function Header({ lang, setLang, view, setView, t, user, onLogout
           >
             <div className="p-4 flex flex-col gap-1">
               <NavItem id="home" label={t.nav.home} icon={Globe} active={view === 'home'} />
-              <NavItem id="about" label={t.nav.about} icon={Info} active={view === 'about'} />
+              <button
+                onClick={() => setIsMobileAboutOpen(!isMobileAboutOpen)}
+                className={`flex items-center justify-between gap-2 px-4 py-2 rounded-lg transition-all text-sm ${(isAboutActive || isMobileAboutOpen) ? 'bg-primary text-white shadow-md' : 'hover:bg-slate-100 text-slate-600'}`}
+              >
+                <span className="flex items-center gap-2">
+                  <Info size={16} />
+                  <span className={lang === 'am' ? 'font-amharic' : ''}>{t.nav.about}</span>
+                </span>
+                <ChevronDown size={14} className={`transition-transform ${isMobileAboutOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {isMobileAboutOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="ml-4 overflow-hidden border-l border-slate-200 pl-3"
+                  >
+                    <button
+                      onClick={() => handleViewChange('about')}
+                      className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${(view === 'about') ? 'text-primary font-semibold' : 'text-slate-600'}`}
+                    >
+                      <Info size={14} />
+                      <span>About CTNET</span>
+                    </button>
+                    <button
+                      onClick={() => handleViewChange('team')}
+                      className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${(view === 'team') ? 'text-primary font-semibold' : 'text-slate-600'}`}
+                    >
+                      <Users size={14} />
+                      <span>CTNET TEAM</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <NavItem id="services" label={t.nav.services} icon={Briefcase} active={view === 'services'} />
               <NavItem id="partners" label={t.nav.partners} icon={Handshake} active={view === 'partners'} />
               <NavItem id="news" label={t.nav.news} icon={Newspaper} active={view === 'news'} />

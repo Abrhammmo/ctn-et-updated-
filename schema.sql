@@ -72,6 +72,19 @@ CREATE TABLE IF NOT EXISTS partners (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS team_members (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  member_title TEXT NOT NULL,
+  position_role TEXT NOT NULL,
+  description TEXT NOT NULL,
+  photo_url TEXT NOT NULL,
+  facebook_url TEXT,
+  x_url TEXT,
+  youtube_url TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,

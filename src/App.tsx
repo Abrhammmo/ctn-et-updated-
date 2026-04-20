@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { translations } from './translations';
-import { Language, ClinicalTrial } from './types';
+import { Language, ClinicalTrial, TeamMember } from './types';
 
 // Components
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './components/Home';
 import About from './components/About';
+import Team from './components/Team';
 import Services from './components/Services';
 import Partners from './components/Partners';
 import News from './components/News';
@@ -17,7 +18,7 @@ import TrialRegistry from './components/TrialRegistry';
 import Auth from './components/Auth';
 import Admin from './components/Admin';
 
-type View = 'home' | 'about' | 'services' | 'partners' | 'news' | 'contact' | 'volunteer' | 'trials' | 'admin' | 'signin' | 'signup';
+type View = 'home' | 'about' | 'team' | 'services' | 'partners' | 'news' | 'contact' | 'volunteer' | 'trials' | 'admin' | 'signin' | 'signup';
 
 export default function App() {
   const [lang, setLang] = useState<Language>('en');
@@ -27,6 +28,7 @@ export default function App() {
   const [news, setNews] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [user, setUser] = useState<any>(null);
 
   const t = translations[lang];
@@ -37,6 +39,7 @@ export default function App() {
     fetchNews();
     fetchEvents();
     fetchPartners();
+    fetchTeamMembers();
     
     const storedUser = localStorage.getItem('user');
     if (storedUser) setUser(JSON.parse(storedUser));
@@ -109,6 +112,16 @@ export default function App() {
     }
   };
 
+  const fetchTeamMembers = async () => {
+    try {
+      const res = await fetch('/api/team-members');
+      const data = await res.json();
+      setTeamMembers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleLogin = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -161,6 +174,12 @@ export default function App() {
     };
   }, [user?.role]);
 
+  useEffect(() => {
+    if (view === 'team') {
+      fetchTeamMembers();
+    }
+  }, [view]);
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-slate-50">
       <Header 
@@ -188,6 +207,7 @@ export default function App() {
             />
           )}
           {view === 'about' && <About lang={lang} t={t} />}
+          {view === 'team' && <Team lang={lang} teamMembers={teamMembers} />}
           {view === 'services' && <Services lang={lang} t={t} setView={setView} />}
           {view === 'partners' && <Partners lang={lang} t={t} partners={partners} />}
           {view === 'news' && <News lang={lang} t={t} news={news} events={events} />}
@@ -209,7 +229,7 @@ export default function App() {
             />
           )}
           {view === 'admin' && user?.role === 'ADMIN' && (
-            <Admin lang={lang} t={t} onLogout={handleLogout} />
+            <Admin lang={lang} t={t} onLogout={handleLogout} onTeamMembersChanged={fetchTeamMembers} />
           )}
         </AnimatePresence>
       </main>
