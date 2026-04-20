@@ -1,28 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { AnimatePresence } from 'motion/react';
-import { translations } from './translations';
-import { Language, ClinicalTrial, TeamMember } from './types';
+import React, { useState, useEffect } from "react";
+import { AnimatePresence } from "motion/react";
+import { translations } from "./translations";
+import { Language, ClinicalTrial, TeamMember } from "./types";
 
 // Components
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Home from './components/Home';
-import About from './components/About';
-import Team from './components/Team';
-import Services from './components/Services';
-import Partners from './components/Partners';
-import News from './components/News';
-import Contact from './components/Contact';
-import VolunteerForm from './components/VolunteerForm';
-import TrialRegistry from './components/TrialRegistry';
-import Auth from './components/Auth';
-import Admin from './components/Admin';
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import Home from "./components/Home";
+import About from "./components/About";
+import Team from "./components/Team";
+import Services from "./components/Services";
+import Resources from "./components/Resources";
+import Partners from "./components/Partners";
+import News from "./components/News";
+import Contact from "./components/Contact";
+import VolunteerForm from "./components/VolunteerForm";
+import TrialRegistry from "./components/TrialRegistry";
+import Auth from "./components/Auth";
+import Admin from "./components/Admin";
 
-type View = 'home' | 'about' | 'team' | 'services' | 'partners' | 'news' | 'contact' | 'volunteer' | 'trials' | 'admin' | 'signin' | 'signup';
+type View =
+  | "home"
+  | "about"
+  | "team"
+  | "services"
+  | "partners"
+  | "news"
+  | "resources"
+  | "contact"
+  | "volunteer"
+  | "trials"
+  | "admin"
+  | "signin"
+  | "signup";
 
 export default function App() {
-  const [lang, setLang] = useState<Language>('en');
-  const [view, setView] = useState<View>('home');
+  const [lang, setLang] = useState<Language>("en");
+  const [view, setView] = useState<View>("home");
   const [trials, setTrials] = useState<ClinicalTrial[]>([]);
   const [volunteerCount, setVolunteerCount] = useState(0);
   const [news, setNews] = useState<any[]>([]);
@@ -40,8 +54,8 @@ export default function App() {
     fetchEvents();
     fetchPartners();
     fetchTeamMembers();
-    
-    const storedUser = localStorage.getItem('user');
+
+    const storedUser = localStorage.getItem("user");
     if (storedUser) setUser(JSON.parse(storedUser));
 
     verifySession();
@@ -49,16 +63,16 @@ export default function App() {
 
   const verifySession = async () => {
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      const res = await fetch("/api/auth/me", { credentials: "include" });
       if (!res.ok) {
-        localStorage.removeItem('user');
+        localStorage.removeItem("user");
         setUser(null);
         return;
       }
       const data = await res.json();
       if (data?.user) {
         setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
     } catch (err) {
       console.error(err);
@@ -67,7 +81,7 @@ export default function App() {
 
   const fetchTrials = async () => {
     try {
-      const res = await fetch('/api/trials');
+      const res = await fetch("/api/trials");
       const data = await res.json();
       setTrials(data);
     } catch (err) {
@@ -77,7 +91,7 @@ export default function App() {
 
   const fetchVolunteerCount = async () => {
     try {
-      const res = await fetch('/api/volunteers/count');
+      const res = await fetch("/api/volunteers/count");
       const data = await res.json();
       setVolunteerCount(data.count);
     } catch (err) {
@@ -87,7 +101,7 @@ export default function App() {
 
   const fetchNews = async () => {
     try {
-      const res = await fetch('/api/news');
+      const res = await fetch("/api/news");
       setNews(await res.json());
     } catch (err) {
       console.error(err);
@@ -96,7 +110,7 @@ export default function App() {
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch('/api/events');
+      const res = await fetch("/api/events");
       setEvents(await res.json());
     } catch (err) {
       console.error(err);
@@ -105,7 +119,7 @@ export default function App() {
 
   const fetchPartners = async () => {
     try {
-      const res = await fetch('/api/partners');
+      const res = await fetch("/api/partners");
       setPartners(await res.json());
     } catch (err) {
       console.error(err);
@@ -114,7 +128,7 @@ export default function App() {
 
   const fetchTeamMembers = async () => {
     try {
-      const res = await fetch('/api/team-members');
+      const res = await fetch("/api/team-members");
       const data = await res.json();
       setTeamMembers(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -124,27 +138,30 @@ export default function App() {
 
   const handleLogin = (userData: any) => {
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    if (userData.role === 'ADMIN') setView('admin');
-    else setView('home');
+    localStorage.setItem("user", JSON.stringify(userData));
+    if (userData.role === "ADMIN") setView("admin");
+    else setView("home");
   };
 
-  const handleLogout = async (reason?: 'inactive' | 'manual') => {
+  const handleLogout = async (reason?: "inactive" | "manual") => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
     } catch (err) {
       console.error(err);
     }
     setUser(null);
-    localStorage.removeItem('user');
-    setView('home');
+    localStorage.removeItem("user");
+    setView("home");
     // if (reason === 'inactive') {
     //   alert('You have been signed out due to 15 minutes of inactivity.');
     // }
   };
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+    if (user?.role !== "ADMIN") return;
 
     const timeoutMs = 15 * 60 * 1000;
     const pingIntervalMs = 60 * 1000;
@@ -154,18 +171,29 @@ export default function App() {
     const resetTimer = () => {
       if (timeoutId) window.clearTimeout(timeoutId);
       timeoutId = window.setTimeout(() => {
-        handleLogout('inactive');
+        handleLogout("inactive");
       }, timeoutMs);
 
       const now = Date.now();
       if (now - lastPing > pingIntervalMs) {
         lastPing = now;
-        fetch('/api/auth/ping', { method: 'POST', credentials: 'include' }).catch(() => {});
+        fetch("/api/auth/ping", {
+          method: "POST",
+          credentials: "include",
+        }).catch(() => {});
       }
     };
 
-    const events: Array<keyof WindowEventMap> = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
-    events.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
+    const events: Array<keyof WindowEventMap> = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+    ];
+    events.forEach((event) =>
+      window.addEventListener(event, resetTimer, { passive: true }),
+    );
     resetTimer();
 
     return () => {
@@ -175,66 +203,86 @@ export default function App() {
   }, [user?.role]);
 
   useEffect(() => {
-    if (view === 'team') {
+    if (view === "team") {
       fetchTeamMembers();
     }
   }, [view]);
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-slate-50">
-      <Header 
-        lang={lang} 
-        setLang={setLang} 
-        view={view} 
-        setView={setView} 
-        t={t} 
+      <Header
+        lang={lang}
+        setLang={setLang}
+        view={view}
+        setView={setView}
+        t={t}
         user={user}
         onLogout={handleLogout}
       />
 
       <main className="flex-grow">
         <AnimatePresence mode="wait">
-          {view === 'home' && (
-            <Home 
-              lang={lang} 
-              setView={setView} 
-              volunteerCount={volunteerCount} 
-              trialCount={trials.length} 
-              t={t} 
+          {view === "home" && (
+            <Home
+              lang={lang}
+              setView={setView}
+              volunteerCount={volunteerCount}
+              trialCount={trials.length}
+              t={t}
               news={news}
               events={events}
               partners={partners}
             />
           )}
-          {view === 'about' && <About lang={lang} t={t} />}
-          {view === 'team' && <Team lang={lang} teamMembers={teamMembers} />}
-          {view === 'services' && <Services lang={lang} t={t} setView={setView} />}
-          {view === 'partners' && <Partners lang={lang} t={t} partners={partners} />}
-          {view === 'news' && <News lang={lang} t={t} news={news} events={events} />}
-          {view === 'contact' && <Contact lang={lang} t={t} />}
-          {view === 'signin' && <Auth lang={lang} t={t} mode="signin" setView={setView} onLogin={handleLogin} />}
-          {view === 'signup' && <Auth lang={lang} t={t} mode="signup" setView={setView} onLogin={handleLogin} />}
-          {view === 'volunteer' && (
-            <VolunteerForm 
-              lang={lang} 
-              t={t} 
-              onSuccess={fetchVolunteerCount} 
+          {view === "about" && <About lang={lang} t={t} />}
+          {view === "team" && <Team lang={lang} teamMembers={teamMembers} />}
+          {view === "services" && (
+            <Services lang={lang} t={t} setView={setView} />
+          )}
+          {view === "partners" && (
+            <Partners lang={lang} t={t} partners={partners} />
+          )}
+          {view === "resources" && <Resources lang={lang} t={t} />}
+          {view === "news" && (
+            <News lang={lang} t={t} news={news} events={events} />
+          )}
+          {view === "contact" && <Contact lang={lang} t={t} />}
+          {view === "signin" && (
+            <Auth
+              lang={lang}
+              t={t}
+              mode="signin"
+              setView={setView}
+              onLogin={handleLogin}
             />
           )}
-          {view === 'trials' && (
-            <TrialRegistry 
-              lang={lang} 
-              t={t} 
-              trials={trials} 
+          {view === "signup" && (
+            <Auth
+              lang={lang}
+              t={t}
+              mode="signup"
+              setView={setView}
+              onLogin={handleLogin}
             />
           )}
-          {view === 'admin' && user?.role === 'ADMIN' && (
-            <Admin lang={lang} t={t} onLogout={handleLogout} onTeamMembersChanged={fetchTeamMembers} />
+          {view === "volunteer" && (
+            <VolunteerForm lang={lang} t={t} onSuccess={fetchVolunteerCount} />
+          )}
+          {view === "trials" && (
+            <TrialRegistry lang={lang} t={t} trials={trials} />
+          )}
+          {view === "admin" && user?.role === "ADMIN" && (
+            <Admin
+              lang={lang}
+              t={t}
+              onLogout={handleLogout}
+              onTeamMembersChanged={fetchTeamMembers}
+            />
           )}
         </AnimatePresence>
       </main>
 
-      {view !== 'admin' && <Footer lang={lang} t={t} setView={setView} />}
+      {view !== "admin" && <Footer lang={lang} t={t} setView={setView} />}
     </div>
   );
 }
