@@ -100,7 +100,7 @@ export default function Team({ lang, teamMembers }: TeamProps) {
               Team
             </span>
             <h2 className="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-              CTNET Team
+              CTNET Staff
             </h2>
             <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-slate-500 md:text-lg">
               Meet the multidisciplinary CTNET research group working together to deliver rigorous, ethical, and high-impact clinical research.
