@@ -15,7 +15,12 @@ import {
   ChevronLeft,
   X,
   Clock,
-  MapPin
+  MapPin,
+  Leaf,
+  Handshake,
+  Microscope,
+  Heart,
+  Scale
 } from 'lucide-react';
 import { Language } from '../types';
 import headerImage from '../images/header.jpg';
@@ -37,6 +42,53 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
   const [eventPage, setEventPage] = useState(0);
 
   const displayedEvents = events.slice(eventPage * 4, (eventPage * 4) + 4);
+  const strategicRationaleItems = [
+    'Coordinating Stakeholders: Facilitating seamless collaboration between research sites, institutions, and sponsors.',
+    'Building Capacity: Strengthening clinical trial research infrastructure and expertise nationwide.',
+    'Driving Evidence-Based Decisions: Advocating for high-quality local evidence generation to inform national health policies.',
+  ];
+  const whyEthiopiaItems = [
+    'Research Potential: Home to over 20 universities with significant research capabilities.',
+    'Diverse Study Profiles: A wide-ranging disease profile provides critical opportunities for diverse medical studies.',
+    'Regulatory Growth: An evolving regulatory environment that supports clinical trial expansion.',
+  ];
+  const governanceRows = [
+    {
+      body: 'The Secretariat',
+      role: 'Hosted by AHRI on behalf of the Ministry of Health, it manages day-to-day operations, core platforms (Website, Registry, Volunteer DB), and provides essential support.',
+    },
+    {
+      body: 'Steering Committee (SC)',
+      role: 'A 10-member body representing clinical trial site leaders, the EFDA, NRERB, and the Ministry of Health.',
+    },
+  ];
+  const coreValues = [
+    {
+      title: 'Sustainability',
+      description: 'Ensuring long-term growth and viability for clinical research in Ethiopia.',
+      icon: Leaf,
+    },
+    {
+      title: 'Collaboration',
+      description: 'Working together across institutions and sectors to achieve common goals.',
+      icon: Handshake,
+    },
+    {
+      title: 'Scientific Rigor',
+      description: 'Maintaining the highest standards of accuracy and excellence in all research activities.',
+      icon: Microscope,
+    },
+    {
+      title: 'Respect',
+      description: 'Upholding the dignity and rights of all stakeholders and participants.',
+      icon: Heart,
+    },
+    {
+      title: 'Equity',
+      description: 'Promoting fairness and inclusion throughout the clinical trial ecosystem.',
+      icon: Scale,
+    },
+  ];
 
   const Modal = ({ item, onClose }: { item: any, onClose: () => void }) => {
     const photos = JSON.parse(item.photos || '[]');
@@ -158,6 +210,98 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
             <div>
               <p className="text-3xl font-bold text-slate-900">100%</p>
               <p className="text-slate-500 font-medium">{lang === 'en' ? 'Secure & Regulated' : 'ደህንነቱ የተጠበቀ'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Strategic Brief */} 
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="pb-10 border-b border-slate-200">
+            <h3 className="text-3xl md:text-4xl font-bold text-slate-900 mb-5">
+              Advancing Clinical Research for a Healthier Ethiopia
+            </h3>
+            <p className="text-slate-600 text-lg leading-8">
+              The Clinical Trial Network Ethiopia (CTN-ET) is a collaborative platform unifying research institutions, investigators, and regulators to foster high-quality local evidence. By establishing a coordinated network, we aim to advance the national health sector and create an enabling environment for ethical, evidence-based research that addresses patient needs and enhances care across health facilities.
+            </p>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <section>
+              <h4 className="text-2xl font-bold text-slate-900 mb-4">Strategic Rationale</h4>
+              <p className="text-slate-600 mb-5">
+                Why a unified network is essential for the Ethiopian health sector:
+              </p>
+              <p className="text-slate-600 mb-5">
+                Despite Ethiopia&apos;s significant population size and diverse disease profile, the number of clinical trials remains limited. Progress has historically been hindered by fragmented infrastructure. The CTN-ET addresses this by:
+              </p>
+              <ul className="space-y-3">
+                {strategicRationaleItems.map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-slate-700">
+                    <CheckCircle2 size={18} className="text-primary mt-1 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section>
+              <h4 className="text-2xl font-bold text-slate-900 mb-4">Why Ethiopia?</h4>
+              <p className="text-slate-600 mb-5">
+                Ethiopia offers a unique and evolving landscape for clinical advancement:
+              </p>
+              <ul className="space-y-3">
+                {whyEthiopiaItems.map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-slate-700">
+                    <CheckCircle2 size={18} className="text-secondary mt-1 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          <section className="mt-10 pt-10 border-t border-slate-200">
+            <h4 className="text-2xl font-bold text-slate-900 mb-5">Governance & Leadership</h4>
+            <p className="text-slate-600 mb-6">
+              Our network is built on a foundation of structured leadership and collaborative oversight:
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border border-slate-200 rounded-2xl overflow-hidden">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="px-5 py-3 text-sm font-bold text-slate-700">Body</th>
+                    <th className="px-5 py-3 text-sm font-bold text-slate-700">Role & Responsibility</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {governanceRows.map((row) => (
+                    <tr key={row.body} className="border-t border-slate-200">
+                      <td className="px-5 py-4 font-semibold text-slate-900">{row.body}</td>
+                      <td className="px-5 py-4 text-slate-600">{row.role}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div className="mt-8 bg-slate-100 border border-slate-200 rounded-3xl p-8 md:p-10">
+            <h4 className="text-3xl font-bold text-slate-900 text-center mb-8">Core Values</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+              {coreValues.map((value) => {
+                const Icon = value.icon;
+                return (
+                  <div key={value.title} className="rounded-2xl bg-white border border-slate-200 p-6 text-center shadow-sm">
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center text-primary mb-4">
+                      <Icon size={26} />
+                    </div>
+                    <h5 className="text-lg font-bold text-slate-900 mb-3">{value.title}</h5>
+                    <p className="text-sm text-slate-600 leading-7">{value.description}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
