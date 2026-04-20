@@ -74,7 +74,7 @@ export default function Footer({ lang, t, setView }: FooterProps) {
                   onClick={() => setView("team")}
                   className="hover:text-primary transition-all"
                 >
-                  CTNET TEAM
+                  {t.nav.team}
                 </button>
               </li>
               <li>

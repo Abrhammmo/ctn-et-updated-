@@ -152,7 +152,7 @@ export default function Header({
                             : "text-sm font-medium"
                         }
                       >
-                        About CTNET
+                        {t.nav.about_ctnet}
                       </span>
                     </button>
                     <button
@@ -167,7 +167,7 @@ export default function Header({
                             : "text-sm font-medium"
                         }
                       >
-                        CTNET TEAM
+                        {t.nav.team}
                       </span>
                     </button>
                   </motion.div>
@@ -334,14 +334,14 @@ export default function Header({
                       className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${view === "about" ? "text-primary font-semibold" : "text-slate-600"}`}
                     >
                       <Info size={14} />
-                      <span>About CTNET</span>
+                      <span>{t.nav.about_ctnet}</span>
                     </button>
                     <button
                       onClick={() => handleViewChange("team")}
                       className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${view === "team" ? "text-primary font-semibold" : "text-slate-600"}`}
                     >
                       <Users size={14} />
-                      <span>CTNET TEAM</span>
+                      <span>{t.nav.team}</span>
                     </button>
                   </motion.div>
                 )}
