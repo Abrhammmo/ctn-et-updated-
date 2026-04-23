@@ -1,6 +1,7 @@
 import React from "react";
 import { Activity } from "lucide-react";
 import { Language } from "../types";
+import footerlogo from "../images/favicon.png";
 
 interface FooterProps {
   lang: Language;
@@ -31,8 +32,17 @@ export default function Footer({ lang, t, setView }: FooterProps) {
                   }}
                   referrerPolicy="no-referrer"
                 />
-                <div className="hidden w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
-                  <Activity size={24} />
+                <div className="hidden w-10 h-10 rounded-lg flex items-center justify-center text-white">
+                  <img
+                    src={footerlogo}
+                    alt="CTN-ET Logo Placeholder"
+                    className="h-full w-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextElementSibling?.classList.remove("hidden");
+              }}
+              referrerPolicy="no-referrer"
+                  />
                 </div>
               </div>
               <h1 className="text-xl font-bold text-primary tracking-tight">
