@@ -388,7 +388,7 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
           <div className="overflow-hidden">
             <div className="partners-banner-track">
               {marqueePartners.map((partner, i) => (
-                <div key={`${partner.id || partner.name}-${i}`} className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-3xl shadow-lg border border-slate-100 p-6 flex items-center justify-center shrink-0 mx-4">
+                <div key={`${partner.id || partner.name}-${i}`} className="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center shrink-0 mx-4">
                   <img src={partner.image_url} alt={partner.name} className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
               ))}
