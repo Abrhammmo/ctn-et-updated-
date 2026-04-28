@@ -31,6 +31,7 @@ export default function Partners({ lang, t, partners }: PartnersProps) {
     acc[categoryKey].push(partner);
     return acc;
   }, {});
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -71,6 +72,11 @@ export default function Partners({ lang, t, partners }: PartnersProps) {
       setStatus('error');
       setErrorMessage(error?.message || 'Failed to submit application');
     }
+  };
+
+  const toWebsiteUrl = (website: string) => {
+    if (/^https?:\/\//i.test(website)) return website;
+    return `https://${website}`;
   };
 
   return (
@@ -134,7 +140,40 @@ export default function Partners({ lang, t, partners }: PartnersProps) {
                         )}
                       </div>
                       <p className="font-bold text-slate-900 mb-2">{partner.name}</p>
-                      <p className="text-sm text-slate-600">{partner.description || 'No description provided.'}</p>
+                      {(() => {
+                        const description = partner.description || 'No description provided.';
+                        const isExpanded = Boolean(expandedDescriptions[partner.id]);
+                        const canExpand = description.length > 140;
+                        return (
+                          <>
+                            <p className={`text-sm text-slate-600 ${!isExpanded && canExpand ? 'line-clamp-3' : ''}`}>{description}</p>
+                            {canExpand && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedDescriptions((prev) => ({
+                                    ...prev,
+                                    [partner.id]: !prev[partner.id],
+                                  }))
+                                }
+                                className="mt-2 text-sm font-semibold text-primary text-left"
+                              >
+                                {isExpanded ? 'Show less' : 'Read more'}
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
+                      {partner.official_website && (
+                        <a
+                          href={toWebsiteUrl(partner.official_website)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex text-sm font-semibold text-secondary hover:text-secondary/80"
+                        >
+                          Official website
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>

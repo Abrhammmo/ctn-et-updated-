@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Newspaper, Calendar, Clock, ChevronRight, X } from 'lucide-react';
+import { Newspaper, Calendar, Clock, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { Language } from '../types';
 
 interface NewsProps {
@@ -47,9 +47,21 @@ export default function News({ lang, t, news: initialNews, events: initialEvents
     }
   };
 
+  const parsePhotos = (value: string | null | undefined) => {
+    if (!value) return [] as string[];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  };
+
   const Modal = ({ item, onClose }: { item: any; onClose: () => void }) => {
-    const photos = JSON.parse(item.photos || '[]');
+    const photos = parsePhotos(item.photos);
     const isEvent = Boolean(item.start_date);
+    const [photoIndex, setPhotoIndex] = useState(0);
+    const hasMultiplePhotos = photos.length > 1;
 
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
@@ -80,11 +92,45 @@ export default function News({ lang, t, news: initialNews, events: initialEvents
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {photos.map((p: string, i: number) => (
-                <img key={i} src={p} className="w-full h-64 object-cover rounded-2xl shadow-md" />
-              ))}
-            </div>
+            {photos.length > 0 && (
+              <div className="relative mb-8">
+                <img
+                  src={photos[photoIndex]}
+                  className="w-full h-[26rem] object-cover rounded-2xl shadow-md"
+                  alt={`${item.title_en || 'Event'} photo ${photoIndex + 1}`}
+                />
+                {hasMultiplePhotos && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1))}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1))}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </>
+                )}
+                {hasMultiplePhotos && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {photos.map((_: string, index: number) => (
+                      <button
+                        key={`dot-${index}`}
+                        type="button"
+                        onClick={() => setPhotoIndex(index)}
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${index === photoIndex ? 'bg-white w-6' : 'bg-white/60'}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className={`text-slate-600 leading-relaxed space-y-4 ${lang === 'am' ? 'font-amharic' : ''}`}>
               <p className="text-lg font-bold text-slate-900">{lang === 'en' ? item.summary_en : item.summary_am}</p>
@@ -141,7 +187,7 @@ export default function News({ lang, t, news: initialNews, events: initialEvents
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {news.map((item) => {
-                  const photos = JSON.parse(item.photos || '[]');
+                  const photos = parsePhotos(item.photos);
                   return (
                     <motion.div key={item.id} whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col">
                       {photos[0] && <img src={photos[0]} className="w-full h-48 object-cover rounded-2xl mb-6" />}
@@ -152,11 +198,9 @@ export default function News({ lang, t, news: initialNews, events: initialEvents
                         {lang === 'en' ? item.summary_en : item.summary_am}
                       </p>
                       <div className="mt-auto">
-                        {(lang === 'en' ? item.description_en : item.description_am) && (
-                          <button type="button" onClick={() => setSelectedItem(item)} className="text-primary font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
-                            {t.news.readMore} <ChevronRight size={16} />
-                          </button>
-                        )}
+                        <button type="button" onClick={() => setSelectedItem(item)} className="text-primary font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
+                          {t.news.readMore} <ChevronRight size={16} />
+                        </button>
                       </div>
                     </motion.div>
                   );
@@ -189,11 +233,9 @@ export default function News({ lang, t, news: initialNews, events: initialEvents
                       {lang === 'en' ? event.summary_en : event.summary_am}
                     </p>
                     <div className="mt-auto">
-                      {(lang === 'en' ? event.description_en : event.description_am) && (
-                        <button type="button" onClick={() => setSelectedItem(event)} className="text-primary font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
-                          {t.news.readMore} <ChevronRight size={16} />
-                        </button>
-                      )}
+                      <button type="button" onClick={() => setSelectedItem(event)} className="text-primary font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
+                        {t.news.readMore} <ChevronRight size={16} />
+                      </button>
                     </div>
                   </motion.div>
                 ))}

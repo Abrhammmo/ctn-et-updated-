@@ -29,3 +29,18 @@
 .input-field {
   @apply w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all;
 }
+
+@keyframes partners-left-to-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+.partners-banner-track {
+  display: flex;
+  width: max-content;
+  animation: partners-left-to-right 24s linear infinite;
+}

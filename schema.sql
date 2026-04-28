@@ -68,7 +68,20 @@ CREATE TABLE IF NOT EXISTS partners (
   category TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
+  official_website TEXT,
   image_url TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS resources (
+  id TEXT PRIMARY KEY,
+  resource_type TEXT NOT NULL CHECK (resource_type IN ('guidelines_directives', 'online_courses', 'publications')),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  drive_link TEXT,
+  drive_iframe_html TEXT,
+  author TEXT,
+  publication_year INTEGER,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

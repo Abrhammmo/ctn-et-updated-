@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -6,8 +6,6 @@ import {
   ShieldCheck, 
   Search, 
   ArrowRight, 
-  Activity, 
-  Globe, 
   CheckCircle2, 
   Newspaper, 
   Calendar, 
@@ -15,7 +13,6 @@ import {
   ChevronLeft,
   X,
   Clock,
-  MapPin,
   Leaf,
   Handshake,
   Microscope,
@@ -52,16 +49,6 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
     'Diverse Study Profiles: A wide-ranging disease profile provides critical opportunities for diverse medical studies.',
     'Regulatory Growth: An evolving regulatory environment that supports clinical trial expansion.',
   ];
-  const governanceRows = [
-    {
-      body: 'The Secretariat',
-      role: 'Hosted by AHRI on behalf of the Ministry of Health, it manages day-to-day operations, core platforms (Website, Registry, Volunteer DB), and provides essential support.',
-    },
-    {
-      body: 'Steering Committee (SC)',
-      role: 'A 10-member body representing clinical trial site leaders, the EFDA, NRERB, and the Ministry of Health.',
-    },
-  ];
   const coreValues = [
     {
       title: 'Sustainability',
@@ -90,8 +77,25 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
     },
   ];
 
+  const parsePhotos = (value: string | null | undefined) => {
+    if (!value) return [] as string[];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const marqueePartners = useMemo(() => {
+    if (!partners.length) return [];
+    return [...partners, ...partners];
+  }, [partners]);
+
   const Modal = ({ item, onClose }: { item: any, onClose: () => void }) => {
-    const photos = JSON.parse(item.photos || '[]');
+    const photos = parsePhotos(item.photos);
+    const [photoIndex, setPhotoIndex] = useState(0);
+    const hasMultiplePhotos = photos.length > 1;
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <motion.div 
@@ -121,11 +125,45 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {photos.map((p: string, i: number) => (
-                <img key={i} src={p} className="w-full h-64 object-cover rounded-2xl shadow-md" />
-              ))}
-            </div>
+            {photos.length > 0 && (
+              <div className="relative mb-8">
+                <img
+                  src={photos[photoIndex]}
+                  className="w-full h-[26rem] object-cover rounded-2xl shadow-md"
+                  alt={`${item.title_en || 'Event'} photo ${photoIndex + 1}`}
+                />
+                {hasMultiplePhotos && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1))}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1))}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </>
+                )}
+                {hasMultiplePhotos && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {photos.map((_: string, index: number) => (
+                      <button
+                        key={`dot-${index}`}
+                        type="button"
+                        onClick={() => setPhotoIndex(index)}
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${index === photoIndex ? 'bg-white w-6' : 'bg-white/60'}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className={`text-slate-600 leading-relaxed space-y-4 ${lang === 'am' ? 'font-amharic' : ''}`}>
               <p className="text-lg font-bold text-slate-900">{lang === 'en' ? item.summary_en : item.summary_am}</p>
@@ -168,7 +206,7 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
               <span className="text-sm font-bold uppercase tracking-widest">Clinical Trial Network Ethiopia</span>
             </motion.div>
             <motion.h2 initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className={`text-5xl md:text-7xl font-bold mb-8 leading-[1.1] ${lang === 'am' ? 'font-amharic' : ''}`}>
-              {lang === 'en' ? 'Advancing Clinical Research in Ethiopia' : 'በኢትዮጵያ የክሊኒካል ምርምርን ማሳደግ'}
+              {lang === 'en' ? 'Advancing Clinical Trials in Ethiopia' : 'በኢትዮጵያ የክሊኒካል ሙከራዎችን ማሳደግ'}
             </motion.h2>
             <motion.p initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className={`text-xl md:text-2xl text-white/90 mb-12 max-w-2xl leading-relaxed ${lang === 'am' ? 'font-amharic' : ''}`}>
               {t.hero.subtitle}
@@ -262,31 +300,6 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
             </section>
           </div>
 
-          <section className="mt-10 pt-10 border-t border-slate-200">
-            <h4 className="text-2xl font-bold text-slate-900 mb-5">Governance & Leadership</h4>
-            <p className="text-slate-600 mb-6">
-              Our network is built on a foundation of structured leadership and collaborative oversight:
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border border-slate-200 rounded-2xl overflow-hidden">
-                <thead className="bg-slate-100">
-                  <tr>
-                    <th className="px-5 py-3 text-sm font-bold text-slate-700">Body</th>
-                    <th className="px-5 py-3 text-sm font-bold text-slate-700">Role & Responsibility</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {governanceRows.map((row) => (
-                    <tr key={row.body} className="border-t border-slate-200">
-                      <td className="px-5 py-4 font-semibold text-slate-900">{row.body}</td>
-                      <td className="px-5 py-4 text-slate-600">{row.role}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
           <div className="mt-8 bg-slate-100 border border-slate-200 rounded-3xl p-8 md:p-10">
             <h4 className="text-3xl font-bold text-slate-900 text-center mb-8">Core Values</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
@@ -338,7 +351,6 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {displayedEvents.map((event, i) => {
-              const photos = JSON.parse(event.photos || '[]');
               return (
                 <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-[2rem] flex flex-col">
                   <div className="flex items-center gap-2 text-secondary text-xs font-bold uppercase tracking-widest mb-4">
@@ -352,11 +364,9 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
                     {lang === 'en' ? event.summary_en : event.summary_am}
                   </p>
                   <div className="mt-auto">
-                    {(lang === 'en' ? event.description_en : event.description_am) && (
-                      <button onClick={() => setSelectedItem(event)} className="text-white font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
-                        {t.news.readMore} <ChevronRight size={16} />
-                      </button>
-                    )}
+                    <button onClick={() => setSelectedItem(event)} className="text-white font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
+                      {t.news.readMore} <ChevronRight size={16} />
+                    </button>
                   </div>
                 </motion.div>
               );
@@ -375,12 +385,14 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
             <p className="text-slate-500 font-medium">Collaborating with leading institutions to advance research.</p>
           </div>
           
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
-            {partners.map((partner, i) => (
-              <motion.div key={i} whileHover={{ scale: 1.05 }} className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-3xl shadow-lg border border-slate-100 p-6 flex items-center justify-center group">
-                <img src={partner.image_url} alt={partner.name} className="max-w-full max-h-full object-contain grayscale group-hover:grayscale-0 transition-all" referrerPolicy="no-referrer" />
-              </motion.div>
-            ))}
+          <div className="overflow-hidden">
+            <div className="partners-banner-track">
+              {marqueePartners.map((partner, i) => (
+                <div key={`${partner.id || partner.name}-${i}`} className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-3xl shadow-lg border border-slate-100 p-6 flex items-center justify-center shrink-0 mx-4">
+                  <img src={partner.image_url} alt={partner.name} className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

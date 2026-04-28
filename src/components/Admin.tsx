@@ -16,6 +16,9 @@ import {
   Mail,
   ShieldAlert,
   Handshake,
+  BookOpen,
+  Globe,
+  ChevronDown,
 } from 'lucide-react';
 import { Language, TeamMember } from '../types';
 
@@ -35,17 +38,20 @@ const toDataUrl = (file: File) =>
   });
 
 export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
-  const [activeTab, setActiveTab] = useState<'news' | 'events' | 'partners' | 'team' | 'people' | 'admins'>('news');
+  const [activeTab, setActiveTab] = useState<'news' | 'events' | 'partners' | 'team' | 'people' | 'resources' | 'admins'>('news');
+  const [peopleSubTab, setPeopleSubTab] = useState<'contact_notifications' | 'partner_applications'>('contact_notifications');
   const [loading, setLoading] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
 
   const [news, setNews] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [partnerApplications, setPartnerApplications] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
+  const [expandedPartnerDescriptions, setExpandedPartnerDescriptions] = useState<Record<string, boolean>>({});
 
   const [newsForm, setNewsForm] = useState({
     title_en: '', title_am: '', summary_en: '', summary_am: '', description_en: '', description_am: '', photos: [] as string[]
@@ -54,7 +60,15 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
     title_en: '', title_am: '', summary_en: '', summary_am: '', description_en: '', description_am: '', photos: [] as string[], start_date: '', end_date: ''
   });
   const [partnerForm, setPartnerForm] = useState({
-    category: 'university', name: '', description: '', image_url: ''
+    category: 'university', name: '', description: '', official_website: '', image_url: ''
+  });
+  const [resourceForm, setResourceForm] = useState({
+    resource_type: 'guidelines_directives',
+    title: '',
+    description: '',
+    drive_link: '',
+    author: '',
+    publication_year: '',
   });
   const [teamForm, setTeamForm] = useState({
     name: '',
@@ -111,6 +125,11 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
         const res = await fetch('/api/partners');
         setPartners(await res.json());
       }
+      if (activeTab === 'resources') {
+        const res = await fetch('/api/resources');
+        const data = await res.json().catch(() => ([]));
+        setResources(Array.isArray(data) ? data : []);
+      }
       if (activeTab === 'team') {
         const res = await fetch('/api/team-members');
         const data = await res.json().catch(() => ([]));
@@ -159,6 +178,11 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
     if (!file) return;
     const image = await toDataUrl(file);
     setTeamForm(prev => ({ ...prev, photo_url: image }));
+  };
+
+  const toWebsiteUrl = (website: string) => {
+    if (/^https?:\/\//i.test(website)) return website;
+    return `https://${website}`;
   };
 
   const submitNews = async (e: React.FormEvent) => {
@@ -211,10 +235,42 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to add partner');
       alert('Partner added successfully');
-      setPartnerForm({ category: 'university', name: '', description: '', image_url: '' });
+      setPartnerForm({ category: 'university', name: '', description: '', official_website: '', image_url: '' });
       await fetchData();
     } catch (error: any) {
       alert(error?.message || 'Failed to add partner');
+    }
+  };
+
+  const submitResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        ...resourceForm,
+        publication_year: resourceForm.publication_year
+          ? Number(resourceForm.publication_year)
+          : null,
+      };
+      const res = await fetchWithAuth('/api/admin/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to add resource');
+
+      alert('Resource added successfully');
+      setResourceForm({
+        resource_type: 'guidelines_directives',
+        title: '',
+        description: '',
+        drive_link: '',
+        author: '',
+        publication_year: '',
+      });
+      await fetchData();
+    } catch (error: any) {
+      alert(error?.message || 'Failed to add resource');
     }
   };
 
@@ -258,6 +314,20 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
       await fetchData();
     } catch (error: any) {
       alert(error?.message || 'Failed to delete partner');
+    }
+  };
+
+  const deleteResource = async (id: string) => {
+    if (!confirm('Delete this resource?')) return;
+    try {
+      const res = await fetchWithAuth(`/api/admin/resources/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to delete resource');
+      await fetchData();
+    } catch (error: any) {
+      alert(error?.message || 'Failed to delete resource');
     }
   };
 
@@ -327,7 +397,8 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
     events: 'Events',
     partners: 'Partners',
     team: 'CTNET Team',
-    people: 'People',
+    people: 'Contacts',
+    resources: 'Resources',
     admins: 'Admins',
   };
 
@@ -345,11 +416,12 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
           <button type="button" onClick={() => setActiveTab('events')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'events' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Calendar size={20} />Events</button>
           <button type="button" onClick={() => setActiveTab('partners')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'partners' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Handshake size={20} />Partners</button>
           <button type="button" onClick={() => setActiveTab('team')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'team' ? 'bg-white/20' : 'hover:bg-white/10'}`}><Users size={20} />Add CTNET Member</button>
-          <button type="button" onClick={() => setActiveTab('people')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl relative ${activeTab === 'people' ? 'bg-white/20' : 'hover:bg-white/10'}`}>
+          <button type="button" onClick={() => { setActiveTab('people'); setPeopleSubTab('contact_notifications'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl relative ${activeTab === 'people' ? 'bg-white/20' : 'hover:bg-white/10'}`}>
             <Mail size={20} />
-            People
+            Contacts
             {notificationCount > 0 && <span className="absolute right-4 top-3 min-w-5 h-5 px-1 bg-secondary text-white text-[10px] flex items-center justify-center rounded-full">{notificationCount}</span>}
           </button>
+          <button type="button" onClick={() => setActiveTab('resources')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'resources' ? 'bg-white/20' : 'hover:bg-white/10'}`}><BookOpen size={20} />Resources</button>
           <button type="button" onClick={() => setActiveTab('admins')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'admins' ? 'bg-white/20' : 'hover:bg-white/10'}`}><UserPlus size={20} />Manage Admins</button>
         </nav>
         <div className="p-4 border-t border-white/10">
@@ -485,6 +557,7 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                 </select>
                 <input required value={partnerForm.name} onChange={e => setPartnerForm({ ...partnerForm, name: e.target.value })} placeholder="Partner Name" className="w-full px-4 py-3 rounded-xl border border-slate-200" />
                 <textarea value={partnerForm.description} onChange={e => setPartnerForm({ ...partnerForm, description: e.target.value })} placeholder="Description" className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 h-24" />
+                <input value={partnerForm.official_website} onChange={e => setPartnerForm({ ...partnerForm, official_website: e.target.value })} placeholder="Official website (optional)" className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200" />
                 <div className="md:col-span-2 flex items-center gap-4">
                   {partnerForm.image_url && <img src={partnerForm.image_url} className="w-16 h-16 object-contain border rounded-lg" />}
                   <label className="flex-grow px-4 py-3 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 cursor-pointer">
@@ -515,7 +588,38 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                       Delete
                     </button>
                   </div>
-                  {p.description && <p className="text-sm text-slate-600 mt-3">{p.description}</p>}
+                  {p.description && (
+                    <div className="mt-3">
+                      <p className={`text-sm text-slate-600 ${!expandedPartnerDescriptions[p.id] && p.description.length > 140 ? 'line-clamp-3' : ''}`}>
+                        {p.description}
+                      </p>
+                      {p.description.length > 140 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedPartnerDescriptions((prev) => ({
+                              ...prev,
+                              [p.id]: !prev[p.id],
+                            }))
+                          }
+                          className="mt-1 text-sm font-semibold text-primary"
+                        >
+                          {expandedPartnerDescriptions[p.id] ? 'Show less' : 'Read more'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {p.official_website && (
+                    <a
+                      href={toWebsiteUrl(p.official_website)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-secondary hover:text-secondary/80"
+                    >
+                      <Globe size={14} />
+                      Official website
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -619,44 +723,194 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
         )}
 
         {activeTab === 'people' && (
-          <div className="space-y-10">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Contact Notifications</h3>
-              {contacts.length === 0 ? <p className="text-slate-500">No contact notifications yet.</p> : (
-                <div className="space-y-4">
-                  {contacts.map(c => (
-                    <div key={c.id} className={`bg-white p-6 rounded-2xl border ${c.is_read ? 'border-slate-100' : 'border-primary/30 bg-primary/5'}`}>
-                      <div className="flex justify-between mb-2">
-                        <div><p className="font-bold">{c.name}</p><p className="text-sm text-slate-500">{c.email}</p></div>
-                        <p className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12} />{new Date(c.created_at).toLocaleDateString()}</p>
+          <div className="space-y-6">
+            {/* <div className="bg-white p-6 rounded-2xl border border-slate-100">
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Contacts Management</h3> */}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPeopleSubTab('contact_notifications')}
+                  className={`px-4 py-2 rounded-xl border text-sm font-semibold ${peopleSubTab === 'contact_notifications' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-700 border-slate-200'}`}
+                >
+                  Contact Notifications
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeopleSubTab('partner_applications')}
+                  className={`px-4 py-2 rounded-xl border text-sm font-semibold ${peopleSubTab === 'partner_applications' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-700 border-slate-200'}`}
+                >
+                  Partner Applications
+                </button>
+              </div>
+            {/* </div> */}
+
+            {peopleSubTab === 'contact_notifications' && (
+              <div>
+                {contacts.length === 0 ? <p className="text-slate-500">No contact notifications yet.</p> : (
+                  <div className="space-y-4">
+                    {contacts.map(c => (
+                      <div key={c.id} className={`bg-white p-6 rounded-2xl border ${c.is_read ? 'border-slate-100' : 'border-primary/30 bg-primary/5'}`}>
+                        <div className="flex justify-between mb-2">
+                          <div><p className="font-bold">{c.name}</p><p className="text-sm text-slate-500">{c.email}</p></div>
+                          <p className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12} />{new Date(c.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <p className="font-bold text-slate-800 mb-1">{c.subject}</p>
+                        <p className="text-sm text-slate-600">{c.message}</p>
                       </div>
-                      <p className="font-bold text-slate-800 mb-1">{c.subject}</p>
-                      <p className="text-sm text-slate-600">{c.message}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {peopleSubTab === 'partner_applications' && (
+              <div>
+                {partnerApplications.length === 0 ? <p className="text-slate-500">No partner applications yet.</p> : (
+                  <div className="space-y-4">
+                    {partnerApplications.map(p => (
+                      <div key={p.id} className={`bg-white p-6 rounded-2xl border ${p.is_read ? 'border-slate-100' : 'border-secondary/30 bg-secondary/5'}`}>
+                        <div className="flex justify-between mb-2">
+                          <div><p className="font-bold">{p.organization}</p><p className="text-sm text-slate-500">{p.email}</p></div>
+                          <p className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12} />{new Date(p.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                          <p><span className="font-bold">Category:</span> {p.category}</p>
+                          <p><span className="font-bold">Phone:</span> {p.phone_number}</p>
+                          <p className="md:col-span-2"><span className="font-bold">Other Category:</span> {p.other_category || '-'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'resources' && (
+          <div className="space-y-8">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <Plus size={20} className="text-primary" />
+                Add Resource
+              </h3>
+              <form onSubmit={submitResource} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <select
+                  value={resourceForm.resource_type}
+                  onChange={(e) =>
+                    setResourceForm((prev) => ({
+                      ...prev,
+                      resource_type: e.target.value,
+                      author: '',
+                      publication_year: '',
+                    }))
+                  }
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                >
+                  <option value="guidelines_directives">Guidelines and Directives</option>
+                  <option value="online_courses">Online Courses</option>
+                  <option value="publications">Publications</option>
+                </select>
+                <input
+                  required
+                  value={resourceForm.title}
+                  onChange={(e) => setResourceForm({ ...resourceForm, title: e.target.value })}
+                  placeholder="Title"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+
+                <textarea
+                  required
+                  value={resourceForm.description}
+                  onChange={(e) => setResourceForm({ ...resourceForm, description: e.target.value })}
+                  placeholder="Description"
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 h-24"
+                />
+
+                {resourceForm.resource_type === 'publications' && (
+                  <>
+                    <input
+                      required
+                      value={resourceForm.author}
+                      onChange={(e) => setResourceForm({ ...resourceForm, author: e.target.value })}
+                      placeholder="Author"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                    />
+                    <input
+                      required
+                      type="number"
+                      min="1900"
+                      max="2100"
+                      value={resourceForm.publication_year}
+                      onChange={(e) => setResourceForm({ ...resourceForm, publication_year: e.target.value })}
+                      placeholder="Publication Year"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                    />
+                  </>
+                )}
+
+                <input
+                  value={resourceForm.drive_link}
+                  onChange={(e) => setResourceForm({ ...resourceForm, drive_link: e.target.value })}
+                  placeholder={
+                    resourceForm.resource_type === 'online_courses'
+                      ? 'Google Drive Link (optional)'
+                      : 'Google Drive Link'
+                  }
+                  required={resourceForm.resource_type !== 'online_courses'}
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+
+                <button type="submit" className="md:col-span-2 bg-primary text-white py-4 rounded-2xl font-bold">Add Resource</button>
+              </form>
             </div>
 
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Partner Applications</h3>
-              {partnerApplications.length === 0 ? <p className="text-slate-500">No partner applications yet.</p> : (
-                <div className="space-y-4">
-                  {partnerApplications.map(p => (
-                    <div key={p.id} className={`bg-white p-6 rounded-2xl border ${p.is_read ? 'border-slate-100' : 'border-secondary/30 bg-secondary/5'}`}>
-                      <div className="flex justify-between mb-2">
-                        <div><p className="font-bold">{p.organization}</p><p className="text-sm text-slate-500">{p.email}</p></div>
-                        <p className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12} />{new Date(p.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        <p><span className="font-bold">Category:</span> {p.category}</p>
-                        <p><span className="font-bold">Phone:</span> {p.phone_number}</p>
-                        <p className="md:col-span-2"><span className="font-bold">Other Category:</span> {p.other_category || '-'}</p>
-                      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {resources.map((resource) => (
+                <div key={resource.id} className="bg-white p-4 rounded-2xl border">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{resource.title}</p>
+                      <p className="text-xs text-slate-500 uppercase">
+                        {resource.resource_type === 'guidelines_directives'
+                          ? 'Guidelines and Directives'
+                          : resource.resource_type === 'online_courses'
+                            ? 'Online Courses'
+                            : 'Publications'}
+                      </p>
                     </div>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => deleteResource(resource.id)}
+                      className="shrink-0 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-sm font-semibold"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-3">{resource.description}</p>
+                  {resource.author && (
+                    <p className="text-xs text-slate-500 mb-1">
+                      <span className="font-semibold text-slate-700">Author:</span> {resource.author}
+                    </p>
+                  )}
+                  {resource.publication_year && (
+                    <p className="text-xs text-slate-500 mb-1">
+                      <span className="font-semibold text-slate-700">Year:</span> {resource.publication_year}
+                    </p>
+                  )}
+                  {resource.drive_iframe_html && (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-sm font-semibold text-primary flex items-center gap-2">
+                        Iframe Snippet
+                        <ChevronDown size={14} />
+                      </summary>
+                      <pre className="mt-2 text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap break-all">
+{resource.drive_iframe_html}
+                      </pre>
+                    </details>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           </div>
         )}

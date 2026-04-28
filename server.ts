@@ -32,6 +32,20 @@ console.log("Using PostgreSQL database");
 
 const generateId = () => Math.random().toString(36).slice(2, 11);
 
+const extractGoogleDriveFileId = (url: string) => {
+  if (!url) return null;
+  const match = url.match(/\/d\/([^/]+)\//);
+  return match?.[1] ?? null;
+};
+
+const toGoogleDriveEmbed = (url: string) => {
+  const fileId = extractGoogleDriveFileId(url);
+  if (!fileId) return null;
+  const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+  const iframe = `<iframe src="${previewUrl}" width="150" height="200" allow="autoplay"></iframe>`;
+  return { fileId, previewUrl, iframe };
+};
+
 const getCookieOptions = (req?: any) => {
   const forwardedProto = req?.headers?.["x-forwarded-proto"];
   const isSecure = Boolean(req?.secure || forwardedProto === "https");
@@ -147,7 +161,20 @@ const schema = `
     category TEXT NOT NULL, -- university, bank, others
     name TEXT NOT NULL,
     description TEXT,
+    official_website TEXT,
     image_url TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS resources (
+    id TEXT PRIMARY KEY,
+    resource_type TEXT NOT NULL CHECK (resource_type IN ('guidelines_directives', 'online_courses', 'publications')),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    drive_link TEXT,
+    drive_iframe_html TEXT,
+    author TEXT,
+    publication_year INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -286,6 +313,26 @@ async function initDb() {
     );
   }
   await db.query(`UPDATE news SET photos = '[]' WHERE photos IS NULL OR photos = ''`);
+
+  // Partners table compatibility.
+  await db.query(`ALTER TABLE partners ADD COLUMN IF NOT EXISTS official_website TEXT`);
+
+  // Resources table compatibility.
+  await db.query(`CREATE TABLE IF NOT EXISTS resources (
+    id TEXT PRIMARY KEY,
+    resource_type TEXT NOT NULL CHECK (resource_type IN ('guidelines_directives', 'online_courses', 'publications')),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    drive_link TEXT,
+    drive_iframe_html TEXT,
+    author TEXT,
+    publication_year INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS drive_link TEXT`);
+  await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS drive_iframe_html TEXT`);
+  await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS author TEXT`);
+  await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS publication_year INTEGER`);
 
   // Team members table compatibility.
   await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS name TEXT`);
@@ -560,6 +607,15 @@ async function startServer() {
     }
   });
 
+  app.get("/api/resources", async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM resources ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch resources" });
+    }
+  });
+
   // Contact API
   app.post("/api/contact", async (req, res) => {
     const { name, email, subject, message } = req.body;
@@ -667,11 +723,15 @@ async function startServer() {
   });
 
   app.post("/api/admin/partners", authenticateAdmin, async (req, res) => {
-    const { category, name, description, image_url } = req.body;
+    const { category, name, description, image_url, official_website } = req.body;
+    const website =
+      typeof official_website === "string" && official_website.trim()
+        ? official_website.trim()
+        : null;
     try {
       const id = generateId();
-      const query = `INSERT INTO partners (id, category, name, description, image_url) VALUES ($1, $2, $3, $4, $5)`;
-      const values = [id, category, name, description, image_url];
+      const query = `INSERT INTO partners (id, category, name, description, official_website, image_url) VALUES ($1, $2, $3, $4, $5, $6)`;
+      const values = [id, category, name, description, website, image_url];
 
       await db.query(query, values);
       await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "PARTNER_CREATE", entity: `partner:${id}` });
@@ -692,6 +752,134 @@ async function startServer() {
       res.json({ message: "Partner deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to delete partner" });
+    }
+  });
+
+  app.post("/api/admin/resources", authenticateAdmin, async (req, res) => {
+    const {
+      resource_type,
+      title,
+      description,
+      drive_link,
+      author,
+      publication_year,
+    } = req.body;
+
+    const normalizedType = String(resource_type || "").trim();
+    const normalizedTitle = typeof title === "string" ? title.trim() : "";
+    const normalizedDescription =
+      typeof description === "string" ? description.trim() : "";
+    const normalizedDriveLink =
+      typeof drive_link === "string" ? drive_link.trim() : "";
+    const normalizedAuthor = typeof author === "string" ? author.trim() : "";
+    const normalizedPublicationYear = Number(publication_year);
+    const isPublicationYearValid =
+      Number.isInteger(normalizedPublicationYear) &&
+      normalizedPublicationYear > 0;
+
+    if (
+      !["guidelines_directives", "online_courses", "publications"].includes(
+        normalizedType
+      )
+    ) {
+      return res.status(400).json({ error: "Invalid resource type" });
+    }
+
+    if (!normalizedTitle || !normalizedDescription) {
+      return res.status(400).json({ error: "Title and description are required" });
+    }
+
+    if (normalizedType === "guidelines_directives" && !normalizedDriveLink) {
+      return res
+        .status(400)
+        .json({ error: "Google Drive link is required for guidelines and directives" });
+    }
+
+    if (normalizedType === "publications") {
+      if (!normalizedAuthor) {
+        return res.status(400).json({ error: "Author is required for publications" });
+      }
+      if (!isPublicationYearValid) {
+        return res
+          .status(400)
+          .json({ error: "Publication year must be a valid year" });
+      }
+      if (!normalizedDriveLink) {
+        return res
+          .status(400)
+          .json({ error: "Google Drive link is required for publications" });
+      }
+    }
+
+    let driveIframeHtml: string | null = null;
+    if (normalizedDriveLink) {
+      const embed = toGoogleDriveEmbed(normalizedDriveLink);
+      if (!embed) {
+        return res.status(400).json({
+          error:
+            "Invalid Google Drive link. Please provide a share URL that contains /d/{FILE_ID}/view",
+        });
+      }
+      driveIframeHtml = embed.iframe;
+    }
+
+    try {
+      const id = generateId();
+      await db.query(
+        `INSERT INTO resources (
+          id,
+          resource_type,
+          title,
+          description,
+          drive_link,
+          drive_iframe_html,
+          author,
+          publication_year
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          id,
+          normalizedType,
+          normalizedTitle,
+          normalizedDescription,
+          normalizedDriveLink || null,
+          driveIframeHtml,
+          normalizedType === "publications" ? normalizedAuthor : null,
+          normalizedType === "publications" ? normalizedPublicationYear : null,
+        ]
+      );
+
+      await logAudit({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        action: "RESOURCE_CREATE",
+        entity: `resource:${id}`,
+      });
+
+      res.status(201).json({
+        message: "Resource added",
+        iframeHtml: driveIframeHtml,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to add resource" });
+    }
+  });
+
+  app.delete("/api/admin/resources/:id", authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query("DELETE FROM resources WHERE id = $1", [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Resource not found" });
+      }
+      await logAudit({
+        userId: req.user.id,
+        userEmail: req.user.email,
+        action: "RESOURCE_DELETE",
+        entity: `resource:${id}`,
+      });
+      res.json({ message: "Resource deleted" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to delete resource" });
     }
   });
 

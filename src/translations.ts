@@ -8,7 +8,7 @@ export const translations = {
       partners: "Partners",
       news: "News & Events",
       resources: "Resources",
-      team: "CTNET Team",
+      team: "CTNET Steering Committee",
       registration: "Registration",
       volunteer: "Volunteer Registry",
       trials: "Trial Registry",
@@ -22,7 +22,7 @@ export const translations = {
     },
     hero: {
       title: "Advancing Clinical Research in Ethiopia",
-      subtitle: "Connecting volunteers, researchers, and institutions to build a healthier future for all Ethiopians.",
+      subtitle: "Connecting investigators, trial sites, sponsors, stakeholders and  participants to build a healthier future for all Ethiopians.",
       cta_volunteer: "Register as Volunteer",
       cta_trials: "Explore Trials"
     },
@@ -177,7 +177,7 @@ export const translations = {
     },
     hero: {
       title: "በኢትዮጵያ የክሊኒካል ምርምርን ማሳደግ",
-      subtitle: "ለሁሉም ኢትዮጵያውያን የተሻለ የወደፊት ሕይወት ለመገንባት በጎ ፈቃደኞችን፣ ተመራማሪዎችን እና ተቋማትን ማገናኘት።",
+      subtitle: "ለሁሉም ኢትዮጵያውያን የተሻለ የወደፊት ሕይወት ለመገንባት የመርምር አካላትን፣ የሙከራ ጣቢያዎችን፣ ስፖንሰሮችን፣ እና የሙከራ ተሳታፊዎችን ማገናኘት።",
       cta_volunteer: "እንደ በጎ ፈቃደኛ ይመዝገቡ",
       cta_trials: "ሙከራዎችን ያስሱ"
     },

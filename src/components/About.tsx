@@ -4,6 +4,8 @@ import {
   ArrowRight,
   Building2,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Compass,
   Flag,
@@ -122,6 +124,8 @@ const aboutPage = {
 };
 
 export default function About({ lang, t }: AboutProps) {
+  const aboutCarouselImages = [aboutPageImage];
+  const [aboutImageIndex, setAboutImageIndex] = useState(0);
   const title =
     lang === "am" ? (t.about?.title ?? aboutPage.title) : aboutPage.title;
   const titleClass = lang === "am" ? "font-amharic" : "";
@@ -186,7 +190,43 @@ export default function About({ lang, t }: AboutProps) {
         />
       </div>
 
-      <header className="grid grid-cols-1 sm:grid-cols-[1.05fr_0.95fr] gap-8 md:gap-12 items-center mb-10">
+      <header className="grid grid-cols-1 sm:grid-cols-[0.95fr_1.05fr] gap-8 md:gap-12 items-center mb-10">
+        <div className="relative min-w-0">
+          <div className="absolute -inset-4 bg-primary/10 rounded-[2.5rem] blur-2xl" />
+          <img
+            src={aboutCarouselImages[aboutImageIndex]}
+            alt="CTN-ET collaboration"
+            className="relative w-full rounded-[0.5rem] object-cover shadow-2xl border border-slate-200 sm:min-h-[320px]"
+          />
+
+          {aboutCarouselImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  setAboutImageIndex((prev) =>
+                    prev === 0 ? aboutCarouselImages.length - 1 : prev - 1
+                  )
+                }
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setAboutImageIndex((prev) =>
+                    prev === aboutCarouselImages.length - 1 ? 0 : prev + 1
+                  )
+                }
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </>
+          )}
+        </div>
+
         <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80 mb-4">
             National Clinical Research Collaboration
@@ -199,15 +239,6 @@ export default function About({ lang, t }: AboutProps) {
           <p className="text-lg md:text-xl text-slate-600 leading-relaxed">
             {aboutPage.summary}
           </p>
-        </div>
-
-        <div className="relative min-w-0">
-          <div className="absolute -inset-4 bg-primary/10 rounded-[2.5rem] blur-2xl" />
-          <img
-            src={aboutPageImage}
-            alt="CTN-ET collaboration"
-            className="relative w-full rounded-[0.5rem] object-cover shadow-2xl border border-slate-200 sm:min-h-[320px]"
-          />
         </div>
       </header>
 
