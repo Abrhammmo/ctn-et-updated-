@@ -67,6 +67,7 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
     title: '',
     description: '',
     drive_link: '',
+    website_link: '',
     author: '',
     publication_year: '',
   });
@@ -265,6 +266,7 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
         title: '',
         description: '',
         drive_link: '',
+        website_link: '',
         author: '',
         publication_year: '',
       });
@@ -801,6 +803,7 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                     setResourceForm((prev) => ({
                       ...prev,
                       resource_type: e.target.value,
+                      website_link: '',
                       author: '',
                       publication_year: '',
                     }))
@@ -861,6 +864,15 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                   className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
                 />
 
+                {resourceForm.resource_type === 'online_courses' && (
+                  <input
+                    value={resourceForm.website_link}
+                    onChange={(e) => setResourceForm({ ...resourceForm, website_link: e.target.value })}
+                    placeholder="Website link (optional)"
+                    className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
+                  />
+                )}
+
                 <button type="submit" className="md:col-span-2 bg-primary text-white py-4 rounded-2xl font-bold">Add Resource</button>
               </form>
             </div>
@@ -897,6 +909,16 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                     <p className="text-xs text-slate-500 mb-1">
                       <span className="font-semibold text-slate-700">Year:</span> {resource.publication_year}
                     </p>
+                  )}
+                  {resource.resource_type === 'online_courses' && resource.website_link && (
+                    <a
+                      href={/^https?:\/\//i.test(resource.website_link) ? resource.website_link : `https://${resource.website_link}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex text-xs font-semibold text-primary mb-2"
+                    >
+                      click here
+                    </a>
                   )}
                   {resource.drive_iframe_html && (
                     <details className="mt-3">

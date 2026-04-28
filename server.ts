@@ -172,6 +172,7 @@ const schema = `
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     drive_link TEXT,
+    website_link TEXT,
     drive_iframe_html TEXT,
     author TEXT,
     publication_year INTEGER,
@@ -324,12 +325,14 @@ async function initDb() {
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     drive_link TEXT,
+    website_link TEXT,
     drive_iframe_html TEXT,
     author TEXT,
     publication_year INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
   await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS drive_link TEXT`);
+  await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS website_link TEXT`);
   await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS drive_iframe_html TEXT`);
   await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS author TEXT`);
   await db.query(`ALTER TABLE resources ADD COLUMN IF NOT EXISTS publication_year INTEGER`);
@@ -761,6 +764,7 @@ async function startServer() {
       title,
       description,
       drive_link,
+      website_link,
       author,
       publication_year,
     } = req.body;
@@ -771,6 +775,8 @@ async function startServer() {
       typeof description === "string" ? description.trim() : "";
     const normalizedDriveLink =
       typeof drive_link === "string" ? drive_link.trim() : "";
+    const normalizedWebsiteLink =
+      typeof website_link === "string" ? website_link.trim() : "";
     const normalizedAuthor = typeof author === "string" ? author.trim() : "";
     const normalizedPublicationYear = Number(publication_year);
     const isPublicationYearValid =
@@ -832,16 +838,18 @@ async function startServer() {
           title,
           description,
           drive_link,
+          website_link,
           drive_iframe_html,
           author,
           publication_year
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           id,
           normalizedType,
           normalizedTitle,
           normalizedDescription,
           normalizedDriveLink || null,
+          normalizedType === "online_courses" ? normalizedWebsiteLink || null : null,
           driveIframeHtml,
           normalizedType === "publications" ? normalizedAuthor : null,
           normalizedType === "publications" ? normalizedPublicationYear : null,

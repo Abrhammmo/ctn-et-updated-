@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS resources (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   drive_link TEXT,
+  website_link TEXT,
   drive_iframe_html TEXT,
   author TEXT,
   publication_year INTEGER,
