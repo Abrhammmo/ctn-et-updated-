@@ -129,7 +129,7 @@ export default function About({ lang, t }: AboutProps) {
   const title =
     lang === "am" ? (t.about?.title ?? aboutPage.title) : aboutPage.title;
   const titleClass = lang === "am" ? "font-amharic" : "";
-  const contactEmail = t.contact?.email ?? "mekonnen.teferi@ahri.gov.et";
+  const contactEmail = t.contact?.email ?? "contact@ctnet.org";
 
   function ObjectiveCard({ title, detail }: { title: string; detail: string }) {
     const [flipped, setFlipped] = useState(false);

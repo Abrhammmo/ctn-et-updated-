@@ -396,39 +396,6 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
           </div>
         </div>
       </div>
-
-      {/* Overview Section */}
-      <div className="py-24 max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <h3 className={`text-3xl md:text-4xl font-bold text-slate-900 mb-6 leading-tight ${lang === 'am' ? 'font-amharic' : ''}`}>
-              {lang === 'en' ? 'Strengthening Ethiopia\'s Research Ecosystem' : 'የኢትዮጵያን የምርምር ሥነ-ምህዳር ማጠናከር'}
-            </h3>
-            <p className="text-lg text-slate-600 mb-8 leading-relaxed">{t.about.description}</p>
-            <div className="space-y-4 mb-8">
-              {[
-                lang === 'en' ? 'National Volunteer Registry' : 'ብሔራዊ የበጎ ፈቃደኞች መዝገብ',
-                lang === 'en' ? 'Clinical Trial Database' : 'የክሊኒካል ሙከራ የውሂብ ጎታ',
-                lang === 'en' ? 'Regulatory Compliance Support' : 'የቁጥጥር ተገዢነት ድጋፍ',
-                lang === 'en' ? 'Capacity Building & Training' : 'የአቅም ግንባታ እና ስልጠና'
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <CheckCircle2 className="text-secondary" size={20} />
-                  <span className="font-medium text-slate-700">{item}</span>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setView('about')} className="flex items-center gap-2 text-primary font-bold hover:gap-4 transition-all">
-              {lang === 'en' ? 'Learn more about our mission' : 'ስለ ተልዕኳችን የበለጠ ይወቁ'}
-              <ArrowRight size={20} />
-            </button>
-          </div>
-          <div className="relative">
-            <div className="absolute -inset-4 bg-primary/10 rounded-[3rem] blur-2xl" />
-            <img src={headerImage} alt="Research" className="relative rounded-[2rem] shadow-2xl border border-white/20" referrerPolicy="no-referrer" />
-          </div>
-        </div>
-      </div>
     </motion.section>
   );
 }
