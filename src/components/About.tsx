@@ -16,7 +16,8 @@ import {
   Users,
 } from "lucide-react";
 import { Language } from "../types";
-import aboutPageImage from "../images/about-page-image.png";
+import heroImage from "../images/header.jpg";
+import aboutPageImage from "../images/aboutpageimage.png";
 
 interface AboutProps {
   lang: Language;
@@ -124,8 +125,6 @@ const aboutPage = {
 };
 
 export default function About({ lang, t }: AboutProps) {
-  const aboutCarouselImages = [aboutPageImage];
-  const [aboutImageIndex, setAboutImageIndex] = useState(0);
   const title =
     lang === "am" ? (t.about?.title ?? aboutPage.title) : aboutPage.title;
   const titleClass = lang === "am" ? "font-amharic" : "";
@@ -176,7 +175,7 @@ export default function About({ lang, t }: AboutProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="max-w-7xl mx-auto px-4 py-16 md:py-20"
+      className="max-w-7xl mx-auto px-4 pt-0 pb-16 md:pb-20"
     >
       <div className="flex justify-center mb-8">
         <img
@@ -190,57 +189,30 @@ export default function About({ lang, t }: AboutProps) {
         />
       </div>
 
-      <header className="grid grid-cols-1 sm:grid-cols-[0.95fr_1.05fr] gap-8 md:gap-12 items-center mb-10">
-        <div className="relative min-w-0">
-          <div className="absolute -inset-4 bg-primary/10 rounded-[2.5rem] blur-2xl" />
+      <div className="-mx-4">
+        <header className="relative mb-10 overflow-hidden shadow-2xl">
           <img
-            src={aboutCarouselImages[aboutImageIndex]}
-            alt="CTN-ET collaboration"
-            className="relative w-full rounded-[0.5rem] object-cover shadow-2xl border border-slate-200 sm:min-h-[320px]"
+            src={aboutPageImage}
+            alt="CTN-ET Hero"
+            className="w-full h-80 md:h-130 object-cover"
           />
-
-          {aboutCarouselImages.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={() =>
-                  setAboutImageIndex((prev) =>
-                    prev === 0 ? aboutCarouselImages.length - 1 : prev - 1
-                  )
-                }
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
+          <div className="absolute inset-0 bg-black/50 flex items-center">
+            <div className="text-left text-white px-8 max-w-4xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-white/90 mb-4">
+                National Clinical Research Collaboration
+              </p>
+              <h2
+                className={`text-4xl md:text-5xl font-bold mb-6 ${titleClass}`}
               >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setAboutImageIndex((prev) =>
-                    prev === aboutCarouselImages.length - 1 ? 0 : prev + 1
-                  )
-                }
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/60 transition-all"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </>
-          )}
-        </div>
-
-        <div className="min-w-0">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80 mb-4">
-            National Clinical Research Collaboration
-          </p>
-          <h2
-            className={`text-4xl md:text-5xl font-bold text-slate-900 mb-6 ${titleClass}`}
-          >
-            {title}
-          </h2>
-          <p className="text-lg md:text-xl text-slate-600 leading-relaxed">
-            {aboutPage.summary}
-          </p>
-        </div>
-      </header>
+                {title}
+              </h2>
+              <p className="text-lg md:text-xl leading-relaxed">
+                {aboutPage.summary}
+              </p>
+            </div>
+          </div>
+        </header>
+      </div>
 
       <div className="mb-16 overflow-x-auto pb-2">
         <div className="flex min-w-max justify-start md:justify-center gap-3">
