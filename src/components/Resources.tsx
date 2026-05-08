@@ -161,7 +161,7 @@ export default function Resources({ lang, t }: ResourcesProps) {
                       Developed and maintained by Global Health Trials in
                       collaboration with The Global Health Network, a World
                       Health Organization Collaborating Centre for Research
-                      Information  Sharing, E-learning, and Capacity Development.
+                      Information Sharing, E-learning, and Capacity Development.
                     </p>
                     <a
                       href="https://globalhealthtrials.tghn.org/resources/templates/?_gl=1*12v4cy8*_ga*MTc1MDIyODc1LjE3NzcyOTMxMzc.*_ga_1TTZR2LNTL*czE3NzczMTI1NTkkbzIkZzEkdDE3NzczMTI4OTIkajMxJGwwJGgw"
