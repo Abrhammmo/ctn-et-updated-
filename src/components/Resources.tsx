@@ -63,10 +63,14 @@ export default function Resources({ lang, t }: ResourcesProps) {
   };
 
   const sections = [
+    { key: "templates", title: "Templates" },
     { key: "guidelines_directives", title: "Guidelines and Directives" },
     { key: "online_courses", title: "Online Courses" },
     { key: "publications", title: "Publications" },
   ];
+  const hasDynamicResources = sections
+    .filter((section) => section.key !== "templates")
+    .some((section) => (groupedResources[section.key] || []).length > 0);
 
   const toWebsiteUrl = (website: string) => {
     if (!website) return "";
@@ -114,11 +118,11 @@ export default function Resources({ lang, t }: ResourcesProps) {
               <option value="" disabled>
                 Select a section
               </option>
-              <option value="guidelines_directives">
-                Guidelines and Directives
-              </option>
-              <option value="online_courses">Online Courses</option>
-              <option value="publications">Publications</option>
+              {sections.map((section) => (
+                <option key={section.key} value={section.key}>
+                  {section.title}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -126,13 +130,52 @@ export default function Resources({ lang, t }: ResourcesProps) {
 
       {loading ? (
         <p className="text-slate-500 text-center">Loading resources...</p>
-      ) : resources.length === 0 ? (
-        <p className="text-slate-500 text-center">
-          No resources have been published yet.
-        </p>
       ) : (
         <div className="space-y-10">
           {sections.map((section) => {
+            if (section.key === "templates") {
+              return (
+                <section
+                  id={`resources-section-${section.key}`}
+                  key={section.key}
+                  className="scroll-mt-28"
+                >
+                  <h3 className="text-2xl font-bold text-slate-900 mb-5">
+                    {section.title}
+                  </h3>
+                  <div className="space-y-4">
+                    <p className="text-slate-600 leading-relaxed">
+                      This resource hub provides free, adaptable tools and
+                      templates designed to support clinical research teams
+                      worldwide. Users can access a wide range of materials,
+                      including protocol development guides, feasibility
+                      checklists, informed consent templates, participant
+                      tracking logs, financial management tools, and essential
+                      document checklists. The library also offers SOPs covering
+                      trial management, ethics, safety reporting, data handling,
+                      and quality assurance. All templates are shared by
+                      research groups for open use, with the flexibility to
+                      tailor them to specific study settings.
+                    </p>
+                    <p className="text-slate-600 leading-relaxed">
+                      Developed and maintained by Global Health Trials in
+                      collaboration with The Global Health Network, a World
+                      Health Organization Collaborating Centre for Research
+                      Information Sharing, E-learning, and Capacity Development.
+                    </p>
+                    <a
+                      href="https://globalhealthtrials.tghn.org/resources/templates/?_gl=1*12v4cy8*_ga*MTc1MDIyODc1LjE3NzcyOTMxMzc.*_ga_1TTZR2LNTL*czE3NzczMTI1NTkkbzIkZzEkdDE3NzczMTI4OTIkajMxJGwwJGgw"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex text-sm font-semibold text-primary hover:text-primary-dark"
+                    >
+                      Read more on Global Health Trials
+                    </a>
+                  </div>
+                </section>
+              );
+            }
+
             const sectionResources = groupedResources[section.key] || [];
             if (sectionResources.length === 0) return null;
 
@@ -237,6 +280,11 @@ export default function Resources({ lang, t }: ResourcesProps) {
               </section>
             );
           })}
+          {!hasDynamicResources && (
+            <p className="text-slate-500 text-center">
+              No additional resources have been published yet.
+            </p>
+          )}
         </div>
       )}
     </motion.section>
