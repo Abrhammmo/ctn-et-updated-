@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -21,7 +21,13 @@ import {
 } from 'lucide-react';
 import { Language } from '../types';
 import headerImage from '../images/header.jpg';
+import headerImage1 from '../images/header1.png';
+import headerImage2 from '../images/header2.jpg';
+import headerImage3 from '../images/header3.jpg';
+import headerImage4 from '../images/header5.jpg';
 import faviconLogo from '../images/favicon-logo.png';
+
+const HERO_IMAGES = [headerImage, headerImage1, headerImage2, headerImage3, headerImage4];
 
 interface HomeProps {
   lang: Language;
@@ -37,6 +43,15 @@ interface HomeProps {
 export default function Home({ lang, setView, volunteerCount, trialCount, t, news, events, partners }: HomeProps) {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [eventPage, setEventPage] = useState(0);
+  const [heroSlide, setHeroSlide] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setHeroSlide((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const displayedEvents = events.slice(eventPage * 4, (eventPage * 4) + 4);
   const strategicRationaleItems = [
@@ -190,13 +205,31 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
       {/* Hero */}
       <div className="relative min-h-[700px] flex items-center text-white overflow-hidden">
         <div className="absolute inset-0 z-0">
+          <AnimatePresence initial={false}>
+            <motion.img
+              key={heroSlide}
+              src={HERO_IMAGES[heroSlide]}
+              alt={`Clinical Trial slide ${heroSlide + 1}`}
+              initial={{ x: '100%' }}
+              animate={{ x: '0%' }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.7, ease: 'easeInOut' }}
+              className="absolute inset-0 w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </AnimatePresence>
           <div className="absolute inset-0 bg-slate-900/60 z-10" />
-         
-            
-            <div className="relative h-full hidden md:block">
-              <img src={headerImage} alt="Clinical Trial Concept" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-          
-          </div>
+        </div>
+
+        <div className="absolute inset-y-0 right-4 md:right-8 z-20 flex items-center pointer-events-none">
+          <button
+            type="button"
+            onClick={() => setHeroSlide((prev) => (prev === HERO_IMAGES.length - 1 ? 0 : prev + 1))}
+            className="pointer-events-auto text-white/90 hover:text-white transition-colors"
+            aria-label="Next slide"
+          >
+            <ChevronRight size={44} />
+          </button>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 w-full relative z-20">
@@ -399,4 +432,3 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
     </motion.section>
   );
 }
-
