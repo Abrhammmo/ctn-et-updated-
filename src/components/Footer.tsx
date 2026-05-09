@@ -161,12 +161,13 @@ export default function Footer({ lang, t, setView }: FooterProps) {
         <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-400 font-medium">
           <p>© 2026 Clinical Trial Network Ethiopia. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-primary transition-all">
-              Privacy Policy
-            </a>
-            <a href="#" className="hover:text-primary transition-all">
+            <p>Developed by &nbsp;
+            <a href="https://www.linkedin.com/in/abrham-molla-6867511b6/?skipRedirect=true" className="hover:text-primary transition-all">
+               Abrham Molla
+            </a></p>
+            {/* <a href="#" className="hover:text-primary transition-all">
               Terms of Service
-            </a>
+            </a> */}
           </div>
         </div>
       </div>
