@@ -7,6 +7,7 @@ import { promises as fs } from "fs";
 import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "crypto";
+import nodemailer from "nodemailer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +23,121 @@ const AUDIT_LOG_PATH =
 if (!databaseUrl) {
   throw new Error("DATABASE_URL is required. Configure PostgreSQL in your environment.");
 }
+
+const getEnvValue = (...keys: string[]) => {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+};
+
+const parseBooleanEnv = (value?: string) => {
+  if (!value) return false;
+  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+};
+
+const smtpHost = getEnvValue("SMTP_HOST", "smtp_host");
+const smtpPortRaw = getEnvValue("SMTP_PORT", "smtp_port");
+const smtpPort = Number.parseInt(smtpPortRaw || "587", 10);
+const smtpUser = getEnvValue("SMTP_USER", "smtp_user");
+const smtpPass = getEnvValue("SMTP_PASS", "smtp_pass");
+const smtpFrom = getEnvValue("SMTP_FROM", "smtp_from");
+const smtpSecureRaw = getEnvValue("SMTP_SECURE", "smtp_secure");
+const smtpSecure = smtpSecureRaw ? parseBooleanEnv(smtpSecureRaw) : smtpPort === 465;
+
+const smtpMissingConfig = [
+  !smtpHost ? "SMTP_HOST" : null,
+  !smtpPort || Number.isNaN(smtpPort) ? "SMTP_PORT" : null,
+  !smtpUser ? "SMTP_USER" : null,
+  !smtpPass ? "SMTP_PASS" : null,
+  !smtpFrom ? "SMTP_FROM" : null,
+].filter(Boolean);
+
+const smtpConfigured = smtpMissingConfig.length === 0;
+let smtpTransporter: nodemailer.Transporter | null = null;
+
+if (!smtpConfigured) {
+  console.warn(
+    `[smtp] SMTP is not fully configured. Missing: ${smtpMissingConfig.join(", ")}`
+  );
+}
+
+if (smtpSecure && smtpPort === 587) {
+  console.warn(
+    "[smtp] SMTP_SECURE is true while SMTP_PORT is 587. If mail sending fails, set SMTP_SECURE=false for STARTTLS."
+  );
+}
+
+const getSmtpTransporter = () => {
+  if (!smtpConfigured) {
+    throw new Error(
+      `SMTP is not fully configured. Missing values: ${smtpMissingConfig.join(", ")}`
+    );
+  }
+
+  if (!smtpTransporter) {
+    smtpTransporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+  }
+
+  return smtpTransporter;
+};
+
+const sendAdminCredentialsEmail = async (recipientEmail: string, tempPassword: string) => {
+  const transporter = getSmtpTransporter();
+  const appName = process.env.APP_NAME || "CTNET";
+  const subject = `Your ${appName} admin account credentials`;
+
+  const text = [
+    `Hello,`,
+    ``,
+    `An administrator account has been created for you on ${appName}.`,
+    ``,
+    `Login email: ${recipientEmail}`,
+    `Temporary password: ${tempPassword}`,
+    ``,
+    `Please sign in and update this default password immediately to keep your account secure.`,
+    ``,
+    `If you did not expect this message, please contact your system administrator.`,
+    ``,
+    `Best regards,`,
+    `${appName} Team`,
+  ].join("\n");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b;">
+      <p>Hello,</p>
+      <p>An administrator account has been created for you on <strong>${appName}</strong>.</p>
+      <p>
+        <strong>Login email:</strong> ${recipientEmail}<br />
+        <strong>Temporary password:</strong> ${tempPassword}
+      </p>
+      <p>
+        Please sign in and update this default password immediately to keep your account secure.
+      </p>
+      <p>If you did not expect this message, please contact your system administrator.</p>
+      <p>Best regards,<br />${appName} Team</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: smtpFrom,
+    to: recipientEmail,
+    subject,
+    text,
+    html,
+  });
+};
 
 // Database Setup (PostgreSQL only)
 const db = new Pool({
@@ -86,7 +202,9 @@ const debugSession = (...args: any[]) => {
 let auditLogReady: Promise<void> | null = null;
 const ensureAuditLogDir = () => {
   if (!auditLogReady) {
-    auditLogReady = fs.mkdir(path.dirname(AUDIT_LOG_PATH), { recursive: true });
+    auditLogReady = fs
+      .mkdir(path.dirname(AUDIT_LOG_PATH), { recursive: true })
+      .then(() => undefined);
   }
   return auditLogReady;
 };
@@ -1009,24 +1127,84 @@ async function startServer() {
   });
 
   app.post("/api/admin/add", authenticateAdmin, async (req, res) => {
-    const { email } = req.body;
+    const email =
+      typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+
+    if (!email) {
+      return res.status(400).json({ error: "Admin email is required" });
+    }
+
+    const id = generateId();
+    const password = randomBytes(8).toString("hex").slice(0, 12);
+    const client = await db.connect();
+    let transactionStarted = false;
+
     try {
-      const password = Math.random().toString(36).slice(2, 10); // Generated password
       const hashedPassword = await bcrypt.hash(password, 10);
-      const id = generateId();
       const query = `INSERT INTO users (id, email, password, password_hash, role, must_change_password) VALUES ($1, $2, $3, $3, $4, $5)`;
       const values = [id, email, hashedPassword, "ADMIN", true];
 
-      await db.query(query, values);
+      await client.query("BEGIN");
+      transactionStarted = true;
+      await client.query(query, values);
+      await sendAdminCredentialsEmail(email, password);
+      await client.query("COMMIT");
+      transactionStarted = false;
+
       await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "ADMIN_CREATE", entity: `admin:${email}` });
-      
-      // In a real app, send email here. For now, return it in response.
-      res.status(201).json({ message: "Admin added", generatedPassword: password });
+
+      res.status(201).json({ message: "Admin added and credentials sent by email", emailSent: true });
     } catch (error: any) {
+      if (transactionStarted) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (rollbackError) {
+          console.error("Rollback failed while creating admin:", rollbackError);
+        }
+      }
       if (error?.code === "23505") {
         return res.status(409).json({ error: "Admin with this email already exists" });
       }
-      res.status(500).json({ error: error?.message || "Failed to add admin" });
+      res.status(500).json({
+        error: error?.message || "Failed to add admin and send credentials email",
+      });
+    } finally {
+      client.release();
+    }
+  });
+
+  app.delete("/api/admin/admins/:id", authenticateAdmin, async (req, res) => {
+    const adminId = req.params.id;
+    if (!adminId) {
+      return res.status(400).json({ error: "Admin ID is required" });
+    }
+
+    if (adminId === req.user.id) {
+      return res.status(400).json({ error: "You cannot delete your own admin account" });
+    }
+
+    try {
+      const countResult = await db.query(
+        `SELECT COUNT(*) AS count FROM users WHERE role = 'ADMIN'`
+      );
+      const adminCount = Number(countResult.rows[0]?.count ?? 0);
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: "Cannot delete the last remaining admin account" });
+      }
+
+      const result = await db.query(
+        `DELETE FROM users WHERE id = $1 AND role = 'ADMIN'`,
+        [adminId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Admin not found" });
+      }
+
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "ADMIN_DELETE", entity: `admin:${adminId}` });
+      res.json({ message: "Admin deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to delete admin" });
     }
   });
 
