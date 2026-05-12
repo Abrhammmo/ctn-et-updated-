@@ -208,6 +208,10 @@ export default function App() {
     }
   }, [view]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-slate-50">
       <Header
