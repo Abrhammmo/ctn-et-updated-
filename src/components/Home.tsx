@@ -250,7 +250,7 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
                 <span className={lang === 'am' ? 'font-amharic' : ''}>{t.hero.cta_volunteer}</span>
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <button onClick={() => setView('trials')} className="w-full sm:w-auto bg-white/10 backdrop-blur-xl border border-white/30 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all flex items-center justify-center gap-3">
+              <button onClick={() => setView('home')} className="w-full sm:w-auto bg-white/10 backdrop-blur-xl border border-white/30 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all flex items-center justify-center gap-3">
                 <Search size={24} />
                 <span className={lang === 'am' ? 'font-amharic' : ''}>{t.hero.cta_trials}</span>
               </button>
@@ -260,7 +260,7 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
       </div>
 
       {/* Stats */}
-      <div className="max-w-7xl mx-auto px-4 -mt-12 relative z-20">
+      {/* <div className="max-w-7xl mx-auto px-4 -mt-12 relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 flex items-center gap-6">
             <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600"><Users size={32} /></div>
@@ -284,7 +284,7 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Strategic Brief */} 
       <div className="py-20 bg-white">
