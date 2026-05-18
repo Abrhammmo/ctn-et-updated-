@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Handshake, Hospital, FlaskConical, ShieldCheck, Landmark } from 'lucide-react';
+import { Handshake, Hospital, FlaskConical, ShieldCheck, Landmark, School } from 'lucide-react';
 import { Language } from '../types';
 
 interface PartnersProps {
@@ -12,7 +12,7 @@ interface PartnersProps {
 export default function Partners({ lang, t, partners }: PartnersProps) {
   const categoryMeta: Record<string, { title: string; icon: any }> = {
     bank: { title: 'Bank', icon: Landmark },
-    university: { title: 'University', icon: Hospital },
+    university: { title: 'University', icon: School },
     hospital: { title: 'Hospitals', icon: Hospital },
     hospitals: { title: 'Hospitals', icon: Hospital },
     laboratory: { title: 'Laboratories', icon: FlaskConical },
