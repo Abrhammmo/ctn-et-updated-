@@ -46,6 +46,9 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
   const [peopleSubTab, setPeopleSubTab] = useState<
     "contact_notifications" | "partner_applications"
   >("contact_notifications");
+  const [partnersSubTab, setPartnersSubTab] = useState<
+    "partner" | "founding_member"
+  >("partner");
   const [loading, setLoading] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -111,10 +114,10 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [adminCreationNotice, setAdminCreationNotice] = useState("");
 
-  const handleUnauthorized = () => {
-    alert("Your session has expired. Please sign in again.");
-    onLogout();
-  };
+  // const handleUnauthorized = () => {
+  //   alert("Your session has expired. Please sign in again.");
+  //   onLogout();
+  // };
 
   const fetchWithAuth = async (input: RequestInfo, init?: RequestInit) => {
     const res = await fetch(input, {
@@ -282,17 +285,44 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
 
   const submitPartner = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isFoundingMember = partnersSubTab === "founding_member";
     if (!partnerForm.image_url)
-      return alert("Please upload a logo/image for the partner.");
+      return alert(
+        isFoundingMember
+          ? "Please upload a logo/image for the founding member."
+          : "Please upload a logo/image for the partner.",
+      );
+    if (!partnerForm.name.trim()) {
+      return alert(
+        isFoundingMember
+          ? "Please enter the founding member name."
+          : "Please enter the partner name.",
+      );
+    }
+    if (isFoundingMember && !partnerForm.description.trim()) {
+      return alert("Please add a description for the founding member.");
+    }
+    if (isFoundingMember && !partnerForm.official_website.trim()) {
+      return alert("Please add the official website for the founding member.");
+    }
     try {
+      const payload = {
+        ...partnerForm,
+        category: isFoundingMember ? "others" : partnerForm.category,
+        partner_type: isFoundingMember ? "founding_member" : "partner",
+      };
       const res = await fetchWithAuth("/api/admin/partners", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(partnerForm),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to add partner");
-      alert("Partner added successfully");
+      alert(
+        isFoundingMember
+          ? "Founding member added successfully"
+          : "Partner added successfully",
+      );
       setPartnerForm({
         category: "university",
         name: "",
@@ -507,6 +537,9 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
+    if (tab === "partners") {
+      setPartnersSubTab("partner");
+    }
     setIsSidebarOpen(false);
   };
 
@@ -938,34 +971,63 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
         {activeTab === "partners" && (
           <div className="space-y-8">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-              <h3 className="text-xl font-bold mb-6">Add New Partner</h3>
+              <div className="flex flex-wrap gap-3 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setPartnersSubTab("partner")}
+                  className={`px-4 py-2 rounded-xl border text-sm font-semibold ${partnersSubTab === "partner" ? "bg-primary text-white border-primary" : "bg-white text-slate-700 border-slate-200"}`}
+                >
+                  Partner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPartnersSubTab("founding_member")}
+                  className={`px-4 py-2 rounded-xl border text-sm font-semibold ${partnersSubTab === "founding_member" ? "bg-primary text-white border-primary" : "bg-white text-slate-700 border-slate-200"}`}
+                >
+                  Founding Member
+                </button>
+              </div>
+              <h3 className="text-xl font-bold mb-6">
+                {partnersSubTab === "founding_member"
+                  ? "Add New Founding Member"
+                  : "Add New Partner"}
+              </h3>
               <form
                 onSubmit={submitPartner}
                 className="grid grid-cols-1 md:grid-cols-2 gap-6"
               >
-                <select
-                  value={partnerForm.category}
-                  onChange={(e) =>
-                    setPartnerForm({ ...partnerForm, category: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
-                >
-                  <option value="university">University</option>
-                  <option value="bank">Bank</option>
-                  <option value="hospitals">Hospitals</option>
-                  <option value="laboratories">Laboratories</option>
-                  <option value="others">Others</option>
-                </select>
+                {partnersSubTab === "partner" && (
+                  <select
+                    value={partnerForm.category}
+                    onChange={(e) =>
+                      setPartnerForm({ ...partnerForm, category: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                  >
+                    <option value="university">University</option>
+                    <option value="bank">Bank</option>
+                    <option value="hospitals">Hospitals</option>
+                    <option value="laboratories">Laboratories</option>
+                    <option value="others">Others</option>
+                  </select>
+                )}
                 <input
                   required
                   value={partnerForm.name}
                   onChange={(e) =>
                     setPartnerForm({ ...partnerForm, name: e.target.value })
                   }
-                  placeholder="Partner Name"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                  placeholder={
+                    partnersSubTab === "founding_member"
+                      ? "Founding Member Name"
+                      : "Partner Name"
+                  }
+                  className={`w-full px-4 py-3 rounded-xl border border-slate-200 ${
+                    partnersSubTab === "founding_member" ? "md:col-span-2" : ""
+                  }`}
                 />
                 <textarea
+                  required={partnersSubTab === "founding_member"}
                   value={partnerForm.description}
                   onChange={(e) =>
                     setPartnerForm({
@@ -973,10 +1035,15 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                       description: e.target.value,
                     })
                   }
-                  placeholder="Description"
+                  placeholder={
+                    partnersSubTab === "founding_member"
+                      ? "Description about the founding member"
+                      : "Description"
+                  }
                   className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 h-24"
                 />
                 <input
+                  required={partnersSubTab === "founding_member"}
                   value={partnerForm.official_website}
                   onChange={(e) =>
                     setPartnerForm({
@@ -984,7 +1051,11 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                       official_website: e.target.value,
                     })
                   }
-                  placeholder="Official website (optional)"
+                  placeholder={
+                    partnersSubTab === "founding_member"
+                      ? "Official website"
+                      : "Official website (optional)"
+                  }
                   className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
                 />
                 <div className="md:col-span-2 flex items-center gap-4">
@@ -996,7 +1067,11 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                   )}
                   <label className="flex-grow px-4 py-3 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 cursor-pointer">
                     <ImageIcon size={20} className="mr-2" />
-                    <span className="text-sm font-bold">Upload Logo</span>
+                    <span className="text-sm font-bold">
+                      {partnersSubTab === "founding_member"
+                        ? "Upload Founding Member Logo"
+                        : "Upload Logo"}
+                    </span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1009,7 +1084,9 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                   type="submit"
                   className="md:col-span-2 bg-primary text-white py-4 rounded-2xl font-bold"
                 >
-                  Add Partner
+                  {partnersSubTab === "founding_member"
+                    ? "Add Founding Member"
+                    : "Add Partner"}
                 </button>
               </form>
             </div>
@@ -1025,7 +1102,9 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                       <div className="min-w-0">
                         <p className="font-bold truncate">{p.name}</p>
                         <p className="text-xs text-slate-400 uppercase">
-                          {p.category}
+                          {p.partner_type === "founding_member"
+                            ? "Founding Member"
+                            : p.category}
                         </p>
                       </div>
                     </div>

@@ -102,10 +102,30 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
     }
   };
 
+  const foundingMembers = useMemo(
+    () =>
+      partners.filter(
+        (partner) =>
+          String(partner.partner_type || 'partner').toLowerCase() ===
+          'founding_member',
+      ),
+    [partners],
+  );
+
+  const regularPartners = useMemo(
+    () =>
+      partners.filter(
+        (partner) =>
+          String(partner.partner_type || 'partner').toLowerCase() !==
+          'founding_member',
+      ),
+    [partners],
+  );
+
   const marqueePartners = useMemo(() => {
-    if (!partners.length) return [];
-    return [...partners, ...partners];
-  }, [partners]);
+    if (!regularPartners.length) return [];
+    return [...regularPartners, ...regularPartners];
+  }, [regularPartners]);
 
   const Modal = ({ item, onClose }: { item: any, onClose: () => void }) => {
     const photos = parsePhotos(item.photos);
@@ -418,15 +438,37 @@ export default function Home({ lang, setView, volunteerCount, trialCount, t, new
             <p className="text-slate-500 font-medium">Collaborating with leading institutions to advance research.</p>
           </div>
           
-          <div className="overflow-hidden">
-            <div className="partners-banner-track">
-              {marqueePartners.map((partner, i) => (
-                <div key={`${partner.id || partner.name}-${i}`} className="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center shrink-0 mx-4">
-                  <img src={partner.image_url} alt={partner.name} className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
-                </div>
-              ))}
+          {marqueePartners.length > 0 && (
+            <div className="overflow-hidden">
+              <div className="partners-banner-track">
+                {marqueePartners.map((partner, i) => (
+                  <div key={`${partner.id || partner.name}-${i}`} className="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center shrink-0 mx-4">
+                    <img src={partner.image_url} alt={partner.name} className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {foundingMembers.length > 0 && (
+            <div className="mt-14">
+              <h4 className={`text-2xl md:text-3xl font-bold text-slate-900 text-center mb-8 ${lang === 'am' ? 'font-amharic' : ''}`}>
+                {lang === 'en' ? 'Founding Members' : 'መስራች አባላት'}
+              </h4>
+              <div className="flex flex-wrap items-center justify-center gap-8">
+                {foundingMembers.map((member) => (
+                  <div key={member.id || member.name} className="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
+                    <img
+                      src={member.image_url}
+                      alt={member.name}
+                      className="max-w-full max-h-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </motion.section>

@@ -277,6 +277,7 @@ const schema = `
   CREATE TABLE IF NOT EXISTS partners (
     id TEXT PRIMARY KEY,
     category TEXT NOT NULL, -- university, bank, others
+    partner_type TEXT NOT NULL DEFAULT 'partner', -- partner, founding_member
     name TEXT NOT NULL,
     description TEXT,
     official_website TEXT,
@@ -435,6 +436,10 @@ async function initDb() {
 
   // Partners table compatibility.
   await db.query(`ALTER TABLE partners ADD COLUMN IF NOT EXISTS official_website TEXT`);
+  await db.query(`ALTER TABLE partners ADD COLUMN IF NOT EXISTS partner_type TEXT`);
+  await db.query(`ALTER TABLE partners ALTER COLUMN partner_type SET DEFAULT 'partner'`);
+  await db.query(`UPDATE partners SET partner_type = 'partner' WHERE partner_type IS NULL OR partner_type = ''`);
+  await db.query(`ALTER TABLE partners ALTER COLUMN partner_type SET NOT NULL`);
 
   // Resources table compatibility.
   await db.query(`CREATE TABLE IF NOT EXISTS resources (
@@ -844,15 +849,68 @@ async function startServer() {
   });
 
   app.post("/api/admin/partners", authenticateAdmin, async (req, res) => {
-    const { category, name, description, image_url, official_website } = req.body;
+    const { category, partner_type, name, description, image_url, official_website } = req.body;
+    const normalizedType =
+      String(partner_type || "partner").toLowerCase() === "founding_member"
+        ? "founding_member"
+        : "partner";
+    const normalizedCategory = String(category || "").trim().toLowerCase();
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    const normalizedDescription =
+      typeof description === "string" ? description.trim() : "";
+    const normalizedImage = typeof image_url === "string" ? image_url.trim() : "";
     const website =
       typeof official_website === "string" && official_website.trim()
         ? official_website.trim()
         : null;
+
+    if (!normalizedName) {
+      return res.status(400).json({ error: "Partner/founding member name is required" });
+    }
+    if (!normalizedImage) {
+      return res.status(400).json({ error: "Logo/image is required" });
+    }
+
+    const allowedPartnerCategories = [
+      "bank",
+      "university",
+      "hospitals",
+      "hospital",
+      "laboratories",
+      "laboratory",
+      "others",
+      "other",
+      "labratory",
+      "labratories",
+    ];
+
+    if (normalizedType === "partner" && !allowedPartnerCategories.includes(normalizedCategory)) {
+      return res.status(400).json({ error: "Invalid partner category" });
+    }
+
+    if (normalizedType === "founding_member") {
+      if (!normalizedDescription) {
+        return res.status(400).json({ error: "Description is required for founding members" });
+      }
+      if (!website) {
+        return res.status(400).json({ error: "Official website is required for founding members" });
+      }
+    }
+
+    const categoryToStore =
+      normalizedType === "partner" ? normalizedCategory : "others";
     try {
       const id = generateId();
-      const query = `INSERT INTO partners (id, category, name, description, official_website, image_url) VALUES ($1, $2, $3, $4, $5, $6)`;
-      const values = [id, category, name, description, website, image_url];
+      const query = `INSERT INTO partners (id, category, partner_type, name, description, official_website, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+      const values = [
+        id,
+        categoryToStore || "others",
+        normalizedType,
+        normalizedName,
+        normalizedDescription || null,
+        website,
+        normalizedImage,
+      ];
 
       await db.query(query, values);
       await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "PARTNER_CREATE", entity: `partner:${id}` });

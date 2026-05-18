@@ -23,7 +23,17 @@ export default function Partners({ lang, t, partners }: PartnersProps) {
     others: { title: 'Others', icon: FlaskConical },
   };
 
-  const groupedPartners = partners.reduce((acc: Record<string, any[]>, partner: any) => {
+  const foundingMembers = partners.filter(
+    (partner) =>
+      String(partner.partner_type || 'partner').toLowerCase() ===
+      'founding_member',
+  );
+  const networkPartners = partners.filter(
+    (partner) =>
+      String(partner.partner_type || 'partner').toLowerCase() !==
+      'founding_member',
+  );
+  const groupedPartners = networkPartners.reduce((acc: Record<string, any[]>, partner: any) => {
     const categoryKey = String(partner.category || 'other').toLowerCase();
     if (!acc[categoryKey]) {
       acc[categoryKey] = [];
@@ -79,6 +89,50 @@ export default function Partners({ lang, t, partners }: PartnersProps) {
     return `https://${website}`;
   };
 
+  const renderPartnerCard = (partner: any) => {
+    const description = partner.description || 'No description provided.';
+    const isExpanded = Boolean(expandedDescriptions[partner.id]);
+    const canExpand = description.length > 140;
+
+    return (
+      <div key={partner.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5 flex flex-col">
+        <div className="h-28 mb-4 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
+          {partner.image_url ? (
+            <img src={partner.image_url} alt={partner.name} className="max-h-full max-w-full object-contain" />
+          ) : (
+            <span className="text-xs text-slate-400">No image</span>
+          )}
+        </div>
+        <p className="font-bold text-slate-900 mb-2">{partner.name}</p>
+        <p className={`text-sm text-slate-600 ${!isExpanded && canExpand ? 'line-clamp-3' : ''}`}>{description}</p>
+        {canExpand && (
+          <button
+            type="button"
+            onClick={() =>
+              setExpandedDescriptions((prev) => ({
+                ...prev,
+                [partner.id]: !prev[partner.id],
+              }))
+            }
+            className="mt-2 text-sm font-semibold text-primary text-left"
+          >
+            {isExpanded ? 'Show less' : 'Read more'}
+          </button>
+        )}
+        {partner.official_website && (
+          <a
+            href={toWebsiteUrl(partner.official_website)}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex text-sm font-semibold text-secondary hover:text-secondary/80"
+          >
+            Official website
+          </a>
+        )}
+      </div>
+    );
+  };
+
   return (
     <motion.section 
       key="partners"
@@ -109,78 +163,63 @@ export default function Partners({ lang, t, partners }: PartnersProps) {
       </div>
 
       <div className="space-y-10 mb-16">
-        {Object.keys(groupedPartners).length === 0 ? (
-          <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 text-center">
-            <p className="text-slate-500 font-medium">No partners have been added yet.</p>
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+              <Handshake size={30} />
+            </div>
+            <h3 className={`text-2xl font-bold text-slate-900 ${lang === 'am' ? 'font-amharic' : ''}`}>
+              {lang === 'en' ? 'Founding Members' : 'መስራች አባላት'}
+            </h3>
           </div>
-        ) : (
-          Object.entries(groupedPartners as Record<string, any[]>).map(([category, categoryPartners]) => {
-            const meta = categoryMeta[category] || categoryMeta.other;
-            const Icon = meta.icon;
+          {foundingMembers.length === 0 ? (
+            <p className="text-slate-500 font-medium">No founding members have been added yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {foundingMembers.map((partner) => renderPartnerCard(partner))}
+            </div>
+          )}
+        </div>
 
-            return (
-              <div key={category} className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-                    <Icon size={30} />
-                  </div>
-                  <h3 className={`text-2xl font-bold text-slate-900 ${lang === 'am' ? 'font-amharic' : ''}`}>
-                    {meta.title}
-                  </h3>
-                </div>
+        <div>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-14 h-14 bg-secondary/10 rounded-2xl flex items-center justify-center text-secondary">
+              <Handshake size={30} />
+            </div>
+            <h3 className={`text-2xl font-bold text-slate-900 ${lang === 'am' ? 'font-amharic' : ''}`}>
+              {lang === 'en' ? 'Partners' : 'አጋሮች'}
+            </h3>
+          </div>
+          {Object.keys(groupedPartners).length === 0 ? (
+            <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 text-center">
+              <p className="text-slate-500 font-medium">No partners have been added yet.</p>
+            </div>
+          ) : (
+            Object.entries(groupedPartners as Record<string, any[]>).map(([category, categoryPartners]) => {
+              const meta = categoryMeta[category] || categoryMeta.other;
+              const Icon = meta.icon;
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(categoryPartners as any[]).map((partner: any) => (
-                    <div key={partner.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5 flex flex-col">
-                      <div className="h-28 mb-4 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
-                        {partner.image_url ? (
-                          <img src={partner.image_url} alt={partner.name} className="max-h-full max-w-full object-contain" />
-                        ) : (
-                          <span className="text-xs text-slate-400">No image</span>
-                        )}
-                      </div>
-                      <p className="font-bold text-slate-900 mb-2">{partner.name}</p>
-                      {(() => {
-                        const description = partner.description || 'No description provided.';
-                        const isExpanded = Boolean(expandedDescriptions[partner.id]);
-                        const canExpand = description.length > 140;
-                        return (
-                          <>
-                            <p className={`text-sm text-slate-600 ${!isExpanded && canExpand ? 'line-clamp-3' : ''}`}>{description}</p>
-                            {canExpand && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedDescriptions((prev) => ({
-                                    ...prev,
-                                    [partner.id]: !prev[partner.id],
-                                  }))
-                                }
-                                className="mt-2 text-sm font-semibold text-primary text-left"
-                              >
-                                {isExpanded ? 'Show less' : 'Read more'}
-                              </button>
-                            )}
-                          </>
-                        );
-                      })()}
-                      {partner.official_website && (
-                        <a
-                          href={toWebsiteUrl(partner.official_website)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex text-sm font-semibold text-secondary hover:text-secondary/80"
-                        >
-                          Official website
-                        </a>
-                      )}
+              return (
+                <div key={category} className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 mb-6 last:mb-0">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                      <Icon size={30} />
                     </div>
-                  ))}
+                    <h3 className={`text-2xl font-bold text-slate-900 ${lang === 'am' ? 'font-amharic' : ''}`}>
+                      {meta.title}
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {(categoryPartners as any[]).map((partner: any) =>
+                      renderPartnerCard(partner),
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
 
       <div className="bg-primary text-white p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">

@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS partners (
   id TEXT PRIMARY KEY,
   category TEXT NOT NULL,
+  partner_type TEXT NOT NULL DEFAULT 'partner',
   name TEXT NOT NULL,
   description TEXT,
   official_website TEXT,
