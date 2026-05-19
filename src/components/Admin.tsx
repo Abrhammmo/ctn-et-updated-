@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   Handshake,
   BookOpen,
+  FileText,
   Globe,
   ChevronDown,
   Menu,
@@ -29,6 +30,7 @@ interface AdminProps {
   t: any;
   onLogout: () => void;
   onTeamMembersChanged: () => void;
+  onBlogsChanged: () => void;
 }
 
 const toDataUrl = (file: File) =>
@@ -39,9 +41,20 @@ const toDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
-export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
+export default function Admin({
+  onLogout,
+  onTeamMembersChanged,
+  onBlogsChanged,
+}: AdminProps) {
   const [activeTab, setActiveTab] = useState<
-    "news" | "events" | "partners" | "team" | "people" | "resources" | "admins"
+    | "news"
+    | "blogs"
+    | "events"
+    | "partners"
+    | "team"
+    | "people"
+    | "resources"
+    | "admins"
   >("news");
   const [peopleSubTab, setPeopleSubTab] = useState<
     "contact_notifications" | "partner_applications"
@@ -54,6 +67,7 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [news, setNews] = useState<any[]>([]);
+  const [blogs, setBlogs] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
@@ -65,6 +79,15 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
     useState<Record<string, boolean>>({});
 
   const [newsForm, setNewsForm] = useState({
+    title_en: "",
+    title_am: "",
+    summary_en: "",
+    summary_am: "",
+    description_en: "",
+    description_am: "",
+    photos: [] as string[],
+  });
+  const [blogForm, setBlogForm] = useState({
     title_en: "",
     title_am: "",
     summary_en: "",
@@ -114,10 +137,10 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [adminCreationNotice, setAdminCreationNotice] = useState("");
 
-  // const handleUnauthorized = () => {
-  //   alert("Your session has expired. Please sign in again.");
-  //   onLogout();
-  // };
+  const handleUnauthorized = () => {
+    alert("Your session has expired. Please sign in again.");
+    onLogout();
+  };
 
   const fetchWithAuth = async (input: RequestInfo, init?: RequestInit) => {
     const res = await fetch(input, {
@@ -147,6 +170,10 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
       if (activeTab === "news") {
         const res = await fetch("/api/news");
         setNews(await res.json());
+      }
+      if (activeTab === "blogs") {
+        const res = await fetch("/api/blogs");
+        setBlogs(await res.json());
       }
       if (activeTab === "events") {
         const res = await fetch("/api/events");
@@ -188,13 +215,18 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
 
   const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: "news" | "event",
+    type: "news" | "blog" | "event",
   ) => {
     const files = Array.from(e.target.files || []).slice(0, 4);
     if (!files.length) return;
     const images = await Promise.all(files.map(toDataUrl));
     if (type === "news") {
       setNewsForm((prev) => ({
+        ...prev,
+        photos: [...prev.photos, ...images].slice(0, 4),
+      }));
+    } else if (type === "blog") {
+      setBlogForm((prev) => ({
         ...prev,
         photos: [...prev.photos, ...images].slice(0, 4),
       }));
@@ -250,6 +282,35 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
       await fetchData();
     } catch (error: any) {
       alert(error?.message || "Failed to publish news");
+    }
+  };
+
+  const submitBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!blogForm.photos.length)
+      return alert("Please upload at least one photo for blog.");
+    try {
+      const res = await fetchWithAuth("/api/admin/blogs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(blogForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to publish blog");
+      alert("Blog added successfully");
+      setBlogForm({
+        title_en: "",
+        title_am: "",
+        summary_en: "",
+        summary_am: "",
+        description_en: "",
+        description_am: "",
+        photos: [],
+      });
+      await fetchData();
+      onBlogsChanged();
+    } catch (error: any) {
+      alert(error?.message || "Failed to publish blog");
     }
   };
 
@@ -511,6 +572,21 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
     }
   };
 
+  const deleteBlog = async (id: string) => {
+    if (!confirm("Delete this blog item?")) return;
+    try {
+      const res = await fetchWithAuth(`/api/admin/blogs/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete blog");
+      await fetchData();
+      onBlogsChanged();
+    } catch (error: any) {
+      alert(error?.message || "Failed to delete blog");
+    }
+  };
+
   const deleteEvent = async (id: string) => {
     if (!confirm("Delete this event?")) return;
     try {
@@ -527,6 +603,7 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
 
   const tabHeadingLabels: Record<typeof activeTab, string> = {
     news: "News",
+    blogs: "Blogs",
     events: "Events",
     partners: "Partners",
     team: "CTNET Team",
@@ -590,6 +667,14 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
           >
             <Newspaper size={20} />
             News
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("blogs")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === "blogs" ? "bg-white/20" : "hover:bg-white/10"}`}
+          >
+            <FileText size={20} />
+            Blogs
           </button>
           <button
             type="button"
@@ -803,6 +888,148 @@ export default function Admin({ onLogout, onTeamMembersChanged }: AdminProps) {
                     <button
                       type="button"
                       onClick={() => deleteNews(item.id)}
+                      className="shrink-0 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-sm font-semibold"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "blogs" && (
+          <div className="space-y-8">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <FileText size={20} className="text-primary" />
+                Add New Blog
+              </h3>
+              <form
+                onSubmit={submitBlog}
+                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              >
+                <input
+                  required
+                  value={blogForm.title_en}
+                  onChange={(e) =>
+                    setBlogForm({ ...blogForm, title_en: e.target.value })
+                  }
+                  placeholder="Title (English)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200"
+                />
+                <input
+                  required
+                  value={blogForm.title_am}
+                  onChange={(e) =>
+                    setBlogForm({ ...blogForm, title_am: e.target.value })
+                  }
+                  placeholder="Title (Amharic)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 font-amharic"
+                />
+                <textarea
+                  required
+                  value={blogForm.summary_en}
+                  onChange={(e) =>
+                    setBlogForm({ ...blogForm, summary_en: e.target.value })
+                  }
+                  placeholder="Summary (English)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 h-24"
+                />
+                <textarea
+                  required
+                  value={blogForm.summary_am}
+                  onChange={(e) =>
+                    setBlogForm({ ...blogForm, summary_am: e.target.value })
+                  }
+                  placeholder="Summary (Amharic)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 h-24 font-amharic"
+                />
+                <textarea
+                  value={blogForm.description_en}
+                  onChange={(e) =>
+                    setBlogForm({
+                      ...blogForm,
+                      description_en: e.target.value,
+                    })
+                  }
+                  placeholder="Description (English)"
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 h-24"
+                />
+                <textarea
+                  value={blogForm.description_am}
+                  onChange={(e) =>
+                    setBlogForm({
+                      ...blogForm,
+                      description_am: e.target.value,
+                    })
+                  }
+                  placeholder="Description (Amharic)"
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200 h-24 font-amharic"
+                />
+                <div className="md:col-span-2 flex gap-4 flex-wrap">
+                  {blogForm.photos.map((photo, index) => (
+                    <div
+                      key={index}
+                      className="relative w-24 h-24 rounded-xl overflow-hidden border"
+                    >
+                      <img
+                        src={photo}
+                        className="w-full h-full object-cover"
+                        alt={`Blog upload ${index + 1}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setBlogForm((prev) => ({
+                            ...prev,
+                            photos: prev.photos.filter(
+                              (_, photoIndex) => photoIndex !== index,
+                            ),
+                          }))
+                        }
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {blogForm.photos.length < 4 && (
+                    <label className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer">
+                      <ImageIcon size={24} />
+                      <span className="text-[10px] font-bold mt-1">Upload</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handlePhotoUpload(e, "blog")}
+                      />
+                    </label>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="md:col-span-2 bg-primary text-white py-4 rounded-2xl font-bold"
+                >
+                  Publish Blog
+                </button>
+              </form>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {blogs.map((item) => (
+                <div key={item.id} className="bg-white p-4 rounded-2xl border">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold">{item.title_en}</p>
+                      <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                        {item.summary_en}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteBlog(item.id)}
                       className="shrink-0 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-sm font-semibold"
                     >
                       Delete

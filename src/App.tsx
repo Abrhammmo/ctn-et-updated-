@@ -13,6 +13,7 @@ import Services from "./components/Services";
 import Resources from "./components/Resources";
 import Partners from "./components/Partners";
 import News from "./components/News";
+import Blog from "./components/Blog";
 import Contact from "./components/Contact";
 import VolunteerForm from "./components/VolunteerForm";
 import TrialRegistry from "./components/TrialRegistry";
@@ -26,6 +27,7 @@ type View =
   | "services"
   | "partners"
   | "news"
+  | "blogs"
   | "resources"
   | "contact"
   | "volunteer"
@@ -41,6 +43,7 @@ export default function App() {
   const [volunteerCount, setVolunteerCount] = useState(0);
   const [news, setNews] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [blogs, setBlogs] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -51,6 +54,7 @@ export default function App() {
     fetchTrials();
     fetchVolunteerCount();
     fetchNews();
+    fetchBlogs();
     fetchEvents();
     fetchPartners();
     fetchTeamMembers();
@@ -112,6 +116,15 @@ export default function App() {
     try {
       const res = await fetch("/api/events");
       setEvents(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchBlogs = async () => {
+    try {
+      const res = await fetch("/api/blogs");
+      setBlogs(await res.json());
     } catch (err) {
       console.error(err);
     }
@@ -206,6 +219,9 @@ export default function App() {
     if (view === "team") {
       fetchTeamMembers();
     }
+    if (view === "home" || view === "blogs") {
+      fetchBlogs();
+    }
   }, [view]);
 
   useEffect(() => {
@@ -233,6 +249,7 @@ export default function App() {
               volunteerCount={volunteerCount}
               trialCount={trials.length}
               t={t}
+              blogs={blogs}
               news={news}
               events={events}
               partners={partners}
@@ -250,6 +267,7 @@ export default function App() {
           {view === "news" && (
             <News lang={lang} t={t} news={news} events={events} />
           )}
+          {view === "blogs" && <Blog lang={lang} t={t} blogs={blogs} />}
           {view === "contact" && <Contact lang={lang} t={t} />}
           {view === "signin" && (
             <Auth
@@ -281,6 +299,7 @@ export default function App() {
               t={t}
               onLogout={handleLogout}
               onTeamMembersChanged={fetchTeamMembers}
+              onBlogsChanged={fetchBlogs}
             />
           )}
         </AnimatePresence>

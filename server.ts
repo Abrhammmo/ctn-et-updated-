@@ -260,6 +260,18 @@ const schema = `
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS blogs (
+    id TEXT PRIMARY KEY,
+    title_en TEXT NOT NULL,
+    title_am TEXT NOT NULL,
+    summary_en TEXT NOT NULL,
+    summary_am TEXT NOT NULL,
+    description_en TEXT,
+    description_am TEXT,
+    photos TEXT, -- JSON array of base64 or URLs
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,
     title_en TEXT NOT NULL,
@@ -433,6 +445,27 @@ async function initDb() {
     );
   }
   await db.query(`UPDATE news SET photos = '[]' WHERE photos IS NULL OR photos = ''`);
+
+  // Blogs table compatibility.
+  await db.query(`CREATE TABLE IF NOT EXISTS blogs (
+    id TEXT PRIMARY KEY,
+    title_en TEXT NOT NULL,
+    title_am TEXT NOT NULL,
+    summary_en TEXT NOT NULL,
+    summary_am TEXT NOT NULL,
+    description_en TEXT,
+    description_am TEXT,
+    photos TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await db.query(`ALTER TABLE blogs ADD COLUMN IF NOT EXISTS title_en TEXT`);
+  await db.query(`ALTER TABLE blogs ADD COLUMN IF NOT EXISTS title_am TEXT`);
+  await db.query(`ALTER TABLE blogs ADD COLUMN IF NOT EXISTS summary_en TEXT`);
+  await db.query(`ALTER TABLE blogs ADD COLUMN IF NOT EXISTS summary_am TEXT`);
+  await db.query(`ALTER TABLE blogs ADD COLUMN IF NOT EXISTS description_en TEXT`);
+  await db.query(`ALTER TABLE blogs ADD COLUMN IF NOT EXISTS description_am TEXT`);
+  await db.query(`ALTER TABLE blogs ADD COLUMN IF NOT EXISTS photos TEXT`);
+  await db.query(`UPDATE blogs SET photos = '[]' WHERE photos IS NULL OR photos = ''`);
 
   // Partners table compatibility.
   await db.query(`ALTER TABLE partners ADD COLUMN IF NOT EXISTS official_website TEXT`);
@@ -706,6 +739,15 @@ async function startServer() {
     }
   });
 
+  app.get("/api/blogs", async (req, res) => {
+    try {
+      const result = await db.query("SELECT * FROM blogs ORDER BY created_at DESC");
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch blogs" });
+    }
+  });
+
   app.get("/api/events", async (req, res) => {
     try {
       const result = await db.query("SELECT * FROM events ORDER BY created_at DESC");
@@ -816,6 +858,35 @@ async function startServer() {
       res.json({ message: "News deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Failed to delete news" });
+    }
+  });
+
+  app.post("/api/admin/blogs", authenticateAdmin, async (req, res) => {
+    const { title_en, title_am, summary_en, summary_am, description_en, description_am, photos } = req.body;
+    try {
+      const id = generateId();
+      const query = `INSERT INTO blogs (id, title_en, title_am, summary_en, summary_am, description_en, description_am, photos) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+      const values = [id, title_en, title_am, summary_en, summary_am, description_en, description_am, JSON.stringify(photos)];
+
+      await db.query(query, values);
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "BLOG_CREATE", entity: `blog:${id}` });
+      res.status(201).json({ message: "Blog added" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to add blog" });
+    }
+  });
+
+  app.delete("/api/admin/blogs/:id", authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query("DELETE FROM blogs WHERE id = $1", [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Blog item not found" });
+      }
+      await logAudit({ userId: req.user.id, userEmail: req.user.email, action: "BLOG_DELETE", entity: `blog:${id}` });
+      res.json({ message: "Blog deleted" });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to delete blog" });
     }
   });
 

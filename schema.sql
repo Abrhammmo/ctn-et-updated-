@@ -49,6 +49,18 @@ CREATE TABLE IF NOT EXISTS news (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS blogs (
+  id TEXT PRIMARY KEY,
+  title_en TEXT NOT NULL,
+  title_am TEXT NOT NULL,
+  summary_en TEXT NOT NULL,
+  summary_am TEXT NOT NULL,
+  description_en TEXT,
+  description_am TEXT,
+  photos TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
   title_en TEXT NOT NULL,

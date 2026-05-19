@@ -41,6 +41,7 @@ interface HomeProps {
   volunteerCount: number;
   trialCount: number;
   t: any;
+  blogs: any[];
   news: any[];
   events: any[];
   partners: any[];
@@ -52,6 +53,7 @@ export default function Home({
   volunteerCount,
   trialCount,
   t,
+  blogs,
   news,
   events,
   partners,
@@ -59,14 +61,6 @@ export default function Home({
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [eventPage, setEventPage] = useState(0);
   const [heroSlide, setHeroSlide] = useState(0);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setHeroSlide((prev) => (prev + 1) % HERO_IMAGES.length);
-    }, 3000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   const displayedEvents = events.slice(eventPage * 4, eventPage * 4 + 4);
   const strategicRationaleItems = [
@@ -122,6 +116,38 @@ export default function Home({
     }
   };
 
+  const heroSlides = useMemo(() => {
+    const latestBlogs = blogs.slice(0, 5);
+    if (latestBlogs.length === 0) {
+      return HERO_IMAGES.map((image, index) => ({
+        id: `fallback-${index}`,
+        image,
+        blog: null,
+      }));
+    }
+    return latestBlogs.map((blog, index) => {
+      const photos = parsePhotos(blog.photos);
+      return {
+        id: blog.id || `blog-${index}`,
+        image: photos[0] || HERO_IMAGES[index % HERO_IMAGES.length],
+        blog,
+      };
+    });
+  }, [blogs]);
+
+  useEffect(() => {
+    setHeroSlide(0);
+  }, [heroSlides.length]);
+
+  useEffect(() => {
+    if (heroSlides.length <= 1) return;
+    const intervalId = window.setInterval(() => {
+      setHeroSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 4500);
+
+    return () => window.clearInterval(intervalId);
+  }, [heroSlides.length]);
+
   const foundingMembers = useMemo(
     () =>
       partners.filter(
@@ -146,6 +172,8 @@ export default function Home({
     if (!regularPartners.length) return [];
     return [...regularPartners, ...regularPartners];
   }, [regularPartners]);
+
+  const activeHeroSlide = heroSlides[heroSlide] || heroSlides[0];
 
   const Modal = ({ item, onClose }: { item: any; onClose: () => void }) => {
     const photos = parsePhotos(item.photos);
@@ -273,9 +301,9 @@ export default function Home({
         <div className="absolute inset-0 z-0">
           <AnimatePresence initial={false}>
             <motion.img
-              key={heroSlide}
-              src={HERO_IMAGES[heroSlide]}
-              alt={`Clinical Trial slide ${heroSlide + 1}`}
+              key={activeHeroSlide?.id || heroSlide}
+              src={activeHeroSlide?.image || HERO_IMAGES[0]}
+              alt={`Blog slide ${heroSlide + 1}`}
               initial={{ x: "100%" }}
               animate={{ x: "0%" }}
               exit={{ x: "-100%" }}
@@ -284,82 +312,103 @@ export default function Home({
               referrerPolicy="no-referrer"
             />
           </AnimatePresence>
-          <div className="absolute inset-0 bg-slate-900/60 z-10" />
+          <div className="absolute inset-0 bg-slate-900/55 z-10" />
         </div>
 
-        <div className="absolute inset-y-0 right-4 md:right-8 z-20 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 left-4 md:left-8 z-30 flex items-center pointer-events-none">
           <button
             type="button"
             onClick={() =>
               setHeroSlide((prev) =>
-                prev === HERO_IMAGES.length - 1 ? 0 : prev + 1,
+                prev === 0 ? heroSlides.length - 1 : prev - 1,
               )
             }
-            className="pointer-events-auto text-white/90 hover:text-white transition-colors"
+            className="pointer-events-auto w-11 h-11 rounded-full bg-white text-primary hover:bg-slate-100 transition-all flex items-center justify-center shadow-lg"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft size={24} />
+          </button>
+        </div>
+
+        <div className="absolute inset-y-0 right-4 md:right-8 z-30 flex items-center pointer-events-none">
+          <button
+            type="button"
+            onClick={() =>
+              setHeroSlide((prev) =>
+                prev === heroSlides.length - 1 ? 0 : prev + 1,
+              )
+            }
+            className="pointer-events-auto w-11 h-11 rounded-full bg-white text-primary hover:bg-slate-100 transition-all flex items-center justify-center shadow-lg"
             aria-label="Next slide"
           >
-            <ChevronRight size={44} />
+            <ChevronRight size={24} />
           </button>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 w-full relative z-20">
-          <div className="max-w-3xl">
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 mb-8"
-            >
-              <img src={faviconLogo} alt="Logo" className="w-8 h-8" />
-              <span className="text-sm font-bold uppercase tracking-widest">
-                Clinical Trial Network Ethiopia
-              </span>
-            </motion.div>
-            <motion.h2
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className={`text-5xl md:text-7xl font-bold mb-8 leading-[1.1] ${lang === "am" ? "font-amharic" : ""}`}
-            >
-              {lang === "en"
-                ? "Advancing Clinical Trials in Ethiopia"
-                : "በኢትዮጵያ የክሊኒካል ሙከራዎችን ማሳደግ"}
-            </motion.h2>
-            <motion.p
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className={`text-xl md:text-2xl text-white/90 mb-12 max-w-2xl leading-relaxed ${lang === "am" ? "font-amharic" : ""}`}
-            >
-              {t.hero.subtitle}
-            </motion.p>
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <button
-                onClick={() => setView("volunteer")}
-                className="w-full sm:w-auto bg-secondary hover:bg-accent text-white px-10 py-5 rounded-2xl font-bold text-lg shadow-2xl transition-all flex items-center justify-center gap-3 group"
-              >
-                <Users size={24} />
-                <span className={lang === "am" ? "font-amharic" : ""}>
-                  {t.hero.cta_volunteer}
-                </span>
-                <ArrowRight
-                  size={20}
-                  className="group-hover:translate-x-1 transition-transform"
-                />
-              </button>
-              <button
-                onClick={() => setView("home")}
-                className="w-full sm:w-auto bg-white/10 backdrop-blur-xl border border-white/30 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all flex items-center justify-center gap-3"
-              >
-                <Search size={24} />
-                <span className={lang === "am" ? "font-amharic" : ""}>
-                  {t.hero.cta_trials}
-                </span>
-              </button>
+          <motion.div
+            key={activeHeroSlide?.id || "hero-fallback"}
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.35 }}
+            className="ml-auto w-full max-w-xl bg-primary/70 backdrop-blur-sm border border-white/15 p-6 md:p-8 rounded-[2rem]"
+          >
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/80 font-semibold mb-4">
+              <img src={faviconLogo} alt="Logo" className="w-6 h-6" />
+              {lang === "en" ? "Latest Notices" : "የቅርብ ጊዜ ማስታወቂያዎች"}
             </div>
-          </div>
+
+            {activeHeroSlide?.blog ? (
+              <>
+                <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-3">
+                  {activeHeroSlide.blog.title_en}
+                </h2>
+                <p className="text-white/90 text-sm md:text-base leading-7 mb-5">
+                  {activeHeroSlide.blog.summary_en}
+                </p>
+
+                <h3 className="text-xl md:text-2xl font-amharic font-bold leading-tight mb-3">
+                  {activeHeroSlide.blog.title_am}
+                </h3>
+                <p className="text-white/90 text-sm md:text-base leading-7 mb-6 font-amharic">
+                  {activeHeroSlide.blog.summary_am}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setView("blogs")}
+                  className="inline-flex items-center gap-2 bg-white text-primary px-5 py-2.5 rounded-full font-bold text-sm hover:bg-slate-100 transition-all"
+                >
+                  {t.news.readMore} <ChevronRight size={16} />
+                </button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-3">
+                  {t.hero.title}
+                </h2>
+                <p
+                  className={`text-white/90 text-sm md:text-base leading-7 ${lang === "am" ? "font-amharic" : ""}`}
+                >
+                  {t.hero.subtitle}
+                </p>
+              </>
+            )}
+
+            <div className="mt-6 flex items-center gap-2">
+              {heroSlides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => setHeroSlide(index)}
+                  className={`h-2 rounded-full transition-all ${index === heroSlide ? "w-8 bg-white" : "w-2 bg-white/45"}`}
+                  aria-label={`Slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </motion.div>
         </div>
       </div>
-
       {/* Stats */}
       {/* <div className="max-w-7xl mx-auto px-4 -mt-12 relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -625,3 +674,4 @@ export default function Home({
     </motion.section>
   );
 }
+

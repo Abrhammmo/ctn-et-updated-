@@ -113,6 +113,14 @@ export default function Footer({ lang, t, setView }: FooterProps) {
               </li>
               <li>
                 <button
+                  onClick={() => setView("blogs")}
+                  className="hover:text-primary transition-all"
+                >
+                  {t.nav.blogs ?? "Blogs"}
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => setView("resources")}
                   className="hover:text-primary transition-all"
                 >
