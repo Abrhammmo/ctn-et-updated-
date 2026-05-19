@@ -319,7 +319,7 @@ const schema = `
     photo_url TEXT NOT NULL,
     facebook_url TEXT,
     x_url TEXT,
-    youtube_url TEXT,
+    linkedin_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -501,7 +501,21 @@ async function initDb() {
   await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS photo_url TEXT`);
   await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS facebook_url TEXT`);
   await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS x_url TEXT`);
-  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS youtube_url TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS linkedin_url TEXT`);
+
+  const teamMembersColumnsResult = await db.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'team_members'`
+  );
+  const teamMembersColumns = new Set(teamMembersColumnsResult.rows.map((row: any) => row.column_name));
+  if (teamMembersColumns.has("youtube_url")) {
+    await db.query(
+      `UPDATE team_members
+       SET linkedin_url = youtube_url
+       WHERE linkedin_url IS NULL AND youtube_url IS NOT NULL`
+    );
+  }
 
   await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_id TEXT`);
   await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_email TEXT`);
@@ -1139,7 +1153,7 @@ async function startServer() {
   });
 
   app.post("/api/admin/team-members", authenticateAdmin, async (req, res) => {
-    const { name, member_title, position_role, description, photo_url, facebook_url, x_url, youtube_url } = req.body;
+    const { name, member_title, position_role, description, photo_url, facebook_url, x_url, linkedin_url } = req.body;
     const trimmedName = typeof name === "string" ? name.trim() : "";
     const trimmedMemberTitle = typeof member_title === "string" ? member_title.trim() : "";
     const trimmedPositionRole = typeof position_role === "string" ? position_role.trim() : "";
@@ -1147,7 +1161,7 @@ async function startServer() {
     const trimmedPhoto = typeof photo_url === "string" ? photo_url.trim() : "";
     const trimmedFacebookUrl = typeof facebook_url === "string" ? facebook_url.trim() : "";
     const trimmedXUrl = typeof x_url === "string" ? x_url.trim() : "";
-    const trimmedYoutubeUrl = typeof youtube_url === "string" ? youtube_url.trim() : "";
+    const trimmedLinkedinUrl = typeof linkedin_url === "string" ? linkedin_url.trim() : "";
 
     if (!trimmedName || !trimmedMemberTitle || !trimmedPositionRole || !trimmedDescription || !trimmedPhoto) {
       return res.status(400).json({
@@ -1159,7 +1173,7 @@ async function startServer() {
       const id = generateId();
       await db.query(
         `INSERT INTO team_members (
-          id, name, member_title, position_role, description, photo_url, facebook_url, x_url, youtube_url
+          id, name, member_title, position_role, description, photo_url, facebook_url, x_url, linkedin_url
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           id,
@@ -1170,7 +1184,7 @@ async function startServer() {
           trimmedPhoto,
           trimmedFacebookUrl || null,
           trimmedXUrl || null,
-          trimmedYoutubeUrl || null,
+          trimmedLinkedinUrl || null,
         ]
       );
       await logAudit({

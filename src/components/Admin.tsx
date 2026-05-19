@@ -131,7 +131,7 @@ export default function Admin({
     photo_url: "",
     facebook_url: "",
     x_url: "",
-    youtube_url: "",
+    linkedin_url: "",
   });
   const [adminForm, setAdminForm] = useState({ email: "" });
   const [generatedPassword, setGeneratedPassword] = useState("");
@@ -451,7 +451,7 @@ export default function Admin({
         photo_url: "",
         facebook_url: "",
         x_url: "",
-        youtube_url: "",
+        linkedin_url: "",
       });
       await fetchData();
       onTeamMembersChanged();
@@ -1227,7 +1227,10 @@ export default function Admin({
                   <select
                     value={partnerForm.category}
                     onChange={(e) =>
-                      setPartnerForm({ ...partnerForm, category: e.target.value })
+                      setPartnerForm({
+                        ...partnerForm,
+                        category: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-3 rounded-xl border border-slate-200"
                   >
@@ -1449,11 +1452,11 @@ export default function Admin({
                   className="w-full px-4 py-3 rounded-xl border border-slate-200"
                 />
                 <input
-                  value={teamForm.youtube_url}
+                  value={teamForm.linkedin_url}
                   onChange={(e) =>
-                    setTeamForm({ ...teamForm, youtube_url: e.target.value })
+                    setTeamForm({ ...teamForm, linkedin_url: e.target.value })
                   }
-                  placeholder="YouTube URL (optional)"
+                  placeholder="LinkedIn URL (optional)"
                   className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
                 />
 

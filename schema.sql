@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS team_members (
   photo_url TEXT NOT NULL,
   facebook_url TEXT,
   x_url TEXT,
-  youtube_url TEXT,
+  linkedin_url TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

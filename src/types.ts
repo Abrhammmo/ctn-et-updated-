@@ -34,7 +34,7 @@ export interface TeamMember {
   photo_url: string;
   facebook_url?: string | null;
   x_url?: string | null;
-  youtube_url?: string | null;
+  linkedin_url?: string | null;
   created_at?: string;
 }
 

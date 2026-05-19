@@ -102,27 +102,6 @@ export default function Services({ lang, t, setView }: ServicesProps) {
           referrerPolicy="no-referrer"
         />
       </div>
-
-      <div className="text-center mb-14">
-        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-6">
-          <Briefcase size={32} />
-        </div>
-        <h2
-          className={`text-4xl md:text-5xl font-bold text-slate-900 mb-5 ${headingClass}`}
-        >
-          Services
-        </h2>
-        <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
-          Clinical Trials Network in Ethiopia (CTN-ET) provides a range of
-          services designed to strengthen Ethiopia&apos;s clinical research
-          ecosystem and support the successful implementation of high-quality
-          clinical trials. Through collaboration with national and international
-          partners, CTN-ET facilitates efficient trial planning, implementation,
-          and coordination while ensuring adherence to global scientific and
-          ethical standards.
-        </p>
-      </div>
-
       <div className="space-y-8">
         <div className="p-0">
           <div className="flex items-center gap-3 mb-4">

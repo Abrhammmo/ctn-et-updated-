@@ -65,7 +65,7 @@ const aboutPage = {
     "Strengthen collaboration among clinical trial stakeholders across Ethiopia.",
     "Improve the quality, transparency, and efficiency of clinical trials.",
     "Support regulatory and ethical compliance in clinical research.",
-    "Build national capacity through training and knowledge sharing.",
+    "Strengthen national capacity through training and knowledge sharing.",
     "Facilitate partnerships with regional and international research institutions.",
     "Promote evidence-based health innovation and policy development.",
   ],
@@ -107,7 +107,6 @@ const aboutPage = {
     benefits: [
       "Participate in national clinical trial initiatives.",
       "Collaborate with leading research institutions.",
-      "Access training and capacity-building programs.",
       "Contribute to strengthening Ethiopia's clinical research ecosystem.",
     ],
     closing:
@@ -482,34 +481,6 @@ export default function About({ lang, t }: AboutProps) {
               </h4>
               <p className="text-slate-600 leading-7">
                 {aboutPage.governance.secretariat}
-              </p>
-            </div>
-
-            <div className="border-l-4 border-slate-300 pl-6">
-              <h4 className="text-xl font-bold text-slate-900 mb-2">
-                Technical Working Groups
-              </h4>
-              <p className="text-slate-600 leading-7 mb-5">
-                {aboutPage.governance.workingGroupsText}
-              </p>
-
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {aboutPage.governance.workingGroups.map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-start gap-3 text-slate-700"
-                  >
-                    <CheckCircle2
-                      size={18}
-                      className="shrink-0 mt-1 text-primary"
-                    />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="text-slate-600 leading-7 mt-5">
-                {aboutPage.governance.closing}
               </p>
             </div>
           </div>

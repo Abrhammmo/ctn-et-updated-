@@ -612,6 +612,30 @@ export default function Home({
       </div>
 
       {/* Partners Section */}
+      {foundingMembers.length > 0 && (
+            <div className="mt-14">
+              <h4
+                className={`text-2xl md:text-3xl font-bold text-slate-900 text-center mb-8 ${lang === "am" ? "font-amharic" : ""}`}
+              >
+                {lang === "en" ? "Founding Members" : "መስራች አባላት"}
+              </h4>
+              <div className="flex flex-wrap items-center justify-center gap-8">
+                {foundingMembers.map((member) => (
+                  <div
+                    key={member.id || member.name}
+                    className="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center"
+                  >
+                    <img
+                      src={member.image_url}
+                      alt={member.name}
+                      className="max-w-full max-h-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
       <div className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
@@ -636,31 +660,6 @@ export default function Home({
                     <img
                       src={partner.image_url}
                       alt={partner.name}
-                      className="max-w-full max-h-full object-contain"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {foundingMembers.length > 0 && (
-            <div className="mt-14">
-              <h4
-                className={`text-2xl md:text-3xl font-bold text-slate-900 text-center mb-8 ${lang === "am" ? "font-amharic" : ""}`}
-              >
-                {lang === "en" ? "Founding Members" : "መስራች አባላት"}
-              </h4>
-              <div className="flex flex-wrap items-center justify-center gap-8">
-                {foundingMembers.map((member) => (
-                  <div
-                    key={member.id || member.name}
-                    className="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center"
-                  >
-                    <img
-                      src={member.image_url}
-                      alt={member.name}
                       className="max-w-full max-h-full object-contain"
                       referrerPolicy="no-referrer"
                     />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Facebook, Twitter, Youtube } from 'lucide-react';
+import { Facebook, Twitter, Linkedin } from 'lucide-react';
 import { Language, TeamMember as TeamMemberType } from '../types';
 
 interface TeamProps {
@@ -23,7 +23,7 @@ const TeamMemberCard = ({ member }: TeamMemberProps) => {
   const socialLinks = [
     { key: 'facebook', href: member.facebook_url, Icon: Facebook, label: 'Facebook' },
     { key: 'x', href: member.x_url, Icon: Twitter, label: 'X' },
-    { key: 'youtube', href: member.youtube_url, Icon: Youtube, label: 'YouTube' },
+    { key: 'linkedin', href: member.linkedin_url, Icon: Linkedin, label: 'LinkedIn' },
   ];
 
   return (
@@ -100,7 +100,7 @@ export default function Team({ lang, teamMembers }: TeamProps) {
               Team
             </span>
             <h2 className="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-              CTNET Staff
+              CTNET Steering Committee
             </h2>
             <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-slate-500 md:text-lg">
               Meet the multidisciplinary CTNET research group working together to deliver rigorous, ethical, and high-impact clinical research.
