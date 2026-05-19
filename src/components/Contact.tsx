@@ -56,16 +56,6 @@ export default function Contact({ lang, t }: ContactProps) {
           referrerPolicy="no-referrer"
         />
       </div>
-      <div className="text-center mb-10 md:mb-16">
-        <div className="w-14 h-14 md:w-16 md:h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-6">
-          <Phone size={28} className="md:w-8 md:h-8" />
-        </div>
-        <h2 className={`text-3xl md:text-5xl font-bold text-slate-900 mb-4 md:mb-6 ${lang === 'am' ? 'font-amharic' : ''}`}>{t.contact.title}</h2>
-        <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-          {lang === 'en' ? 'Get in touch with the CTN-ET team at the Armauer Hansen Research Institute.' : 'በአርማወር ሀንሰን የምርምር ኢንስቲትዩት ከ CTN-ET ቡድን ጋር ይገናኙ።'}
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 mb-16">
         <div className="space-y-6 md:space-y-8">
           <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] shadow-xl border border-slate-100">

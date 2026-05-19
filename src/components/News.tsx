@@ -154,14 +154,6 @@ export default function News({ lang, t, news: initialNews, events: initialEvents
         {selectedItem && <Modal item={selectedItem} onClose={() => setSelectedItem(null)} />}
       </AnimatePresence>
 
-      <div className="mb-16">
-        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6">
-          <Newspaper size={32} />
-        </div>
-        <h2 className={`text-4xl md:text-5xl font-bold text-slate-900 mb-3 ${lang === 'am' ? 'font-amharic' : ''}`}>{t.news.title}</h2>
-        <p className="text-xl text-slate-500 font-medium">Latest news and upcoming events from CTN-ET.</p>
-      </div>
-
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[1, 2, 3].map(i => (

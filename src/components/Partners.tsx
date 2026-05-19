@@ -152,16 +152,6 @@ export default function Partners({ lang, t, partners }: PartnersProps) {
           referrerPolicy="no-referrer"
         />
       </div>
-      <div className="text-center mb-16">
-        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-6">
-          <Handshake size={32} />
-        </div>
-        <h2 className={`text-4xl md:text-5xl font-bold text-slate-900 mb-6 ${lang === 'am' ? 'font-amharic' : ''}`}>{t.partners.title}</h2>
-        <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-          {lang === 'en' ? 'CTN-ET collaborates with a wide range of institutions to strengthen Ethiopia\'s clinical trial ecosystem.' : 'CTN-ET የኢትዮጵያን የክሊኒካል ሙከራ ሥነ-ምህዳር ለማጠናከር ከብዙ ተቋማት ጋር ይተባበራል።'}
-        </p>
-      </div>
-
       <div className="space-y-10 mb-16">
         <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
           <div className="flex items-center gap-4 mb-8">
