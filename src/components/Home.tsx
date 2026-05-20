@@ -350,28 +350,21 @@ export default function Home({
             key={activeHeroSlide?.id || "hero-fallback"}
             initial={{ x: 20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.35 }}
+            transition={{ duration: 0.6 }}
             className="ml-auto w-full max-w-xl bg-primary/70 backdrop-blur-sm border border-white/15 p-6 md:p-8 rounded-[2rem]"
           >
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/80 font-semibold mb-4">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/80 font-semibold mb-4">
               <img src={faviconLogo} alt="Logo" className="w-6 h-6" />
               {lang === "en" ? "Latest Notices" : "የቅርብ ጊዜ ማስታወቂያዎች"}
             </div>
 
             {activeHeroSlide?.blog ? (
               <>
-                <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-3">
+                <h2 className="text-[1.7rem] md:text-[2.15rem] font-bold leading-tight mb-3">
                   {activeHeroSlide.blog.title_en}
                 </h2>
-                <p className="text-white/90 text-sm md:text-base leading-7 mb-5">
+                <p className="text-white/90 text-[0.9rem] md:text-[0.95rem] leading-7 mb-6">
                   {activeHeroSlide.blog.summary_en}
-                </p>
-
-                <h3 className="text-xl md:text-2xl font-amharic font-bold leading-tight mb-3">
-                  {activeHeroSlide.blog.title_am}
-                </h3>
-                <p className="text-white/90 text-sm md:text-base leading-7 mb-6 font-amharic">
-                  {activeHeroSlide.blog.summary_am}
                 </p>
 
                 <button
@@ -409,33 +402,6 @@ export default function Home({
           </motion.div>
         </div>
       </div>
-      {/* Stats */}
-      {/* <div className="max-w-7xl mx-auto px-4 -mt-12 relative z-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 flex items-center gap-6">
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600"><Users size={32} /></div>
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{volunteerCount.toLocaleString()}+</p>
-              <p className="text-slate-500 font-medium">{lang === 'en' ? 'Registered Volunteers' : 'የተመዘገቡ በጎ ፈቃደኞች'}</p>
-            </div>
-          </div>
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 flex items-center gap-6">
-            <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-600"><ClipboardList size={32} /></div>
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{trialCount}+</p>
-              <p className="text-slate-500 font-medium">{lang === 'en' ? 'Active Trials' : 'ንቁ ሙከራዎች'}</p>
-            </div>
-          </div>
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 flex items-center gap-6">
-            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600"><ShieldCheck size={32} /></div>
-            <div>
-              <p className="text-3xl font-bold text-slate-900">100%</p>
-              <p className="text-slate-500 font-medium">{lang === 'en' ? 'Secure & Regulated' : 'ደህንነቱ የተጠበቀ'}</p>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
       {/* Strategic Brief */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
@@ -673,4 +639,3 @@ export default function Home({
     </motion.section>
   );
 }
-

@@ -30,6 +30,7 @@ export interface TeamMember {
   name: string;
   member_title: string;
   position_role: string;
+  hierarchy?: 'chair' | 'vice_chair' | 'sc_member' | null;
   description: string;
   photo_url: string;
   facebook_url?: string | null;

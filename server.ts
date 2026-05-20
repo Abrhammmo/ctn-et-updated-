@@ -315,6 +315,7 @@ const schema = `
     name TEXT NOT NULL,
     member_title TEXT NOT NULL,
     position_role TEXT NOT NULL,
+    hierarchy TEXT NOT NULL DEFAULT 'sc_member',
     description TEXT NOT NULL,
     photo_url TEXT NOT NULL,
     facebook_url TEXT,
@@ -502,6 +503,7 @@ async function initDb() {
   await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS facebook_url TEXT`);
   await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS x_url TEXT`);
   await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS linkedin_url TEXT`);
+  await db.query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS hierarchy TEXT`);
 
   const teamMembersColumnsResult = await db.query(
     `SELECT column_name
@@ -516,6 +518,13 @@ async function initDb() {
        WHERE linkedin_url IS NULL AND youtube_url IS NOT NULL`
     );
   }
+  await db.query(
+    `UPDATE team_members
+     SET hierarchy = 'sc_member'
+     WHERE hierarchy IS NULL OR hierarchy = ''`
+  );
+  await db.query(`ALTER TABLE team_members ALTER COLUMN hierarchy SET DEFAULT 'sc_member'`);
+  await db.query(`ALTER TABLE team_members ALTER COLUMN hierarchy SET NOT NULL`);
 
   await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_id TEXT`);
   await db.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_email TEXT`);
@@ -782,7 +791,16 @@ async function startServer() {
 
   app.get("/api/team-members", async (req, res) => {
     try {
-      const result = await db.query("SELECT * FROM team_members ORDER BY created_at DESC");
+      const result = await db.query(`
+        SELECT * FROM team_members
+        ORDER BY
+          CASE
+            WHEN hierarchy = 'chair' THEN 1
+            WHEN hierarchy = 'vice_chair' THEN 2
+            ELSE 3
+          END ASC,
+          created_at DESC
+      `);
       res.json(result.rows);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch team members" });
@@ -1153,15 +1171,30 @@ async function startServer() {
   });
 
   app.post("/api/admin/team-members", authenticateAdmin, async (req, res) => {
-    const { name, member_title, position_role, description, photo_url, facebook_url, x_url, linkedin_url } = req.body;
+    const {
+      name,
+      member_title,
+      position_role,
+      hierarchy,
+      description,
+      photo_url,
+      facebook_url,
+      x_url,
+      linkedin_url,
+    } = req.body;
     const trimmedName = typeof name === "string" ? name.trim() : "";
     const trimmedMemberTitle = typeof member_title === "string" ? member_title.trim() : "";
     const trimmedPositionRole = typeof position_role === "string" ? position_role.trim() : "";
+    const trimmedHierarchy = typeof hierarchy === "string" ? hierarchy.trim() : "";
     const trimmedDescription = typeof description === "string" ? description.trim() : "";
     const trimmedPhoto = typeof photo_url === "string" ? photo_url.trim() : "";
     const trimmedFacebookUrl = typeof facebook_url === "string" ? facebook_url.trim() : "";
     const trimmedXUrl = typeof x_url === "string" ? x_url.trim() : "";
     const trimmedLinkedinUrl = typeof linkedin_url === "string" ? linkedin_url.trim() : "";
+    const normalizedHierarchy =
+      trimmedHierarchy === "chair" || trimmedHierarchy === "vice_chair"
+        ? trimmedHierarchy
+        : "sc_member";
 
     if (!trimmedName || !trimmedMemberTitle || !trimmedPositionRole || !trimmedDescription || !trimmedPhoto) {
       return res.status(400).json({
@@ -1173,13 +1206,14 @@ async function startServer() {
       const id = generateId();
       await db.query(
         `INSERT INTO team_members (
-          id, name, member_title, position_role, description, photo_url, facebook_url, x_url, linkedin_url
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          id, name, member_title, position_role, hierarchy, description, photo_url, facebook_url, x_url, linkedin_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           id,
           trimmedName,
           trimmedMemberTitle,
           trimmedPositionRole,
+          normalizedHierarchy,
           trimmedDescription,
           trimmedPhoto,
           trimmedFacebookUrl || null,

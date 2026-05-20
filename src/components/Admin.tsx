@@ -127,6 +127,7 @@ export default function Admin({
     name: "",
     member_title: "",
     position_role: "",
+    hierarchy: "sc_member",
     description: "",
     photo_url: "",
     facebook_url: "",
@@ -447,6 +448,7 @@ export default function Admin({
         name: "",
         member_title: "",
         position_role: "",
+        hierarchy: "sc_member",
         description: "",
         photo_url: "",
         facebook_url: "",
@@ -1426,6 +1428,23 @@ export default function Admin({
                   placeholder="Position / Role (Director General...)"
                   className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
                 />
+                <select
+                  value={teamForm.hierarchy}
+                  onChange={(e) =>
+                    setTeamForm({
+                      ...teamForm,
+                      hierarchy: e.target.value as
+                        | "chair"
+                        | "vice_chair"
+                        | "sc_member",
+                    })
+                  }
+                  className="md:col-span-2 w-full px-4 py-3 rounded-xl border border-slate-200"
+                >
+                  <option value="chair">Chair</option>
+                  <option value="vice_chair">Vice Chair</option>
+                  <option value="sc_member">SC Members</option>
+                </select>
                 <textarea
                   required
                   value={teamForm.description}
@@ -1505,6 +1524,13 @@ export default function Admin({
                         <p className="font-bold truncate">{member.name}</p>
                         <p className="text-xs text-slate-500 truncate">
                           {member.member_title}
+                        </p>
+                        <p className="text-[11px] text-primary/80 uppercase truncate">
+                          {member.hierarchy === "chair"
+                            ? "Chair"
+                            : member.hierarchy === "vice_chair"
+                              ? "Vice Chair"
+                              : "SC Members"}
                         </p>
                         <p className="text-xs text-slate-400 truncate">
                           {member.position_role}

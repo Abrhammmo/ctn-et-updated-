@@ -1,88 +1,114 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Facebook, Twitter, Linkedin } from 'lucide-react';
-import { Language, TeamMember as TeamMemberType } from '../types';
+import React, { useMemo, useState } from "react";
+import { motion } from "motion/react";
+import { Facebook, Linkedin, Twitter } from "lucide-react";
+import { Language, TeamMember as TeamMemberType } from "../types";
 
 interface TeamProps {
   lang: Language;
   teamMembers: TeamMemberType[];
 }
 
-interface TeamMemberProps {
+interface TeamMemberRowProps {
   member: TeamMemberType;
 }
 
-const TeamMemberCard = ({ member }: TeamMemberProps) => {
+const TeamMemberRow = ({ member }: TeamMemberRowProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const maxDescriptionLength = 140;
+  const maxDescriptionLength = 180;
   const isLongDescription = member.description.length > maxDescriptionLength;
   const previewDescription = isLongDescription
     ? `${member.description.slice(0, maxDescriptionLength).trim()}...`
     : member.description;
 
   const socialLinks = [
-    { key: 'facebook', href: member.facebook_url, Icon: Facebook, label: 'Facebook' },
-    { key: 'x', href: member.x_url, Icon: Twitter, label: 'X' },
-    { key: 'linkedin', href: member.linkedin_url, Icon: Linkedin, label: 'LinkedIn' },
+    { key: "facebook", href: member.facebook_url, Icon: Facebook, label: "Facebook" },
+    { key: "x", href: member.x_url, Icon: Twitter, label: "X" },
+    { key: "linkedin", href: member.linkedin_url, Icon: Linkedin, label: "LinkedIn" },
   ];
 
   return (
-    <article className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-all flex flex-col">
-      <div className="mx-auto mb-6 w-full max-w-[220px]">
-        <div className="aspect-[4/5] w-full overflow-hidden rounded-lg bg-slate-100">
+    <article className="py-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-4">
           <img
             src={member.photo_url}
             alt={member.name}
-            className="h-full w-full object-cover object-center"
+            className="h-20 w-20 rounded-xl object-cover shrink-0"
             loading="lazy"
           />
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
+            <p className="text-sm font-semibold text-primary mt-1">
+              {member.member_title}
+            </p>
+            <p className="text-sm text-slate-600 mt-1">{member.position_role}</p>
+            <p className="text-sm text-slate-500 leading-7 mt-3">
+              {isExpanded ? member.description : previewDescription}
+            </p>
+            {isLongDescription && (
+              <button
+                type="button"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                className="text-sm font-semibold text-primary mt-2"
+              >
+                {isExpanded ? "Read Less" : "Read More"}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      <h3 className="text-center text-xl font-bold text-slate-900">{member.name}</h3>
-      <p className="mt-1 text-center text-sm font-semibold text-primary">{member.member_title}</p>
-      <p className="mt-1 text-center text-sm text-slate-600">{member.position_role}</p>
-      <p className="mt-4 text-sm leading-7 text-slate-500">{isExpanded ? member.description : previewDescription}</p>
-
-      {isLongDescription && (
-        <button
-          type="button"
-          onClick={() => setIsExpanded((prev) => !prev)}
-          className="mt-3 self-start text-sm font-semibold text-primary hover:text-primary-dark transition"
-        >
-          {isExpanded ? 'Read Less' : 'Read More'}
-        </button>
-      )}
-
-      <div className="mt-6 flex items-center justify-center gap-4 border-t border-slate-100 pt-4">
-        {socialLinks.map(({ key, href, Icon, label }) => {
-          if (!href) {
-            return (
-              <span key={key} className="text-gray-300" aria-label={label}>
-                <Icon size={18} />
-              </span>
-            );
-          }
-
-          return (
-            <a
-              key={key}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              className="text-gray-600 transition hover:text-black"
-            >
-              <Icon size={18} />
-            </a>
-          );
-        })}
+        <div className="flex items-center gap-3 md:justify-end">
+          {socialLinks.map(({ key, href, Icon, label }) =>
+            href ? (
+              <a
+                key={key}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="h-9 w-9 rounded-full border border-slate-300 text-slate-600 hover:text-primary hover:border-primary flex items-center justify-center transition-all"
+              >
+                <Icon size={16} />
+              </a>
+            ) : null,
+          )}
+        </div>
       </div>
     </article>
   );
 };
 
-export default function Team({ lang, teamMembers }: TeamProps) {
+export default function Team({ teamMembers }: TeamProps) {
+  const groupedMembers = useMemo(() => {
+    const chair = teamMembers.filter((member) => member.hierarchy === "chair");
+    const viceChair = teamMembers.filter(
+      (member) => member.hierarchy === "vice_chair",
+    );
+    const scMembers = teamMembers.filter(
+      (member) => member.hierarchy !== "chair" && member.hierarchy !== "vice_chair",
+    );
+
+    return { chair, viceChair, scMembers };
+  }, [teamMembers]);
+
+  const sections = [
+    {
+      id: "chair",
+      title: "Chair",
+      members: groupedMembers.chair,
+    },
+    {
+      id: "vice-chair",
+      title: "Vice Chair",
+      members: groupedMembers.viceChair,
+    },
+    {
+      id: "sc-members",
+      title: "SC Members",
+      members: groupedMembers.scMembers,
+    },
+  ];
+
   return (
     <motion.section
       key="team"
@@ -97,27 +123,38 @@ export default function Team({ lang, teamMembers }: TeamProps) {
           <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-white" />
           <div className="relative px-6 py-16 text-center md:px-12">
             <span className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-slate-700">
-              Team
+              CTN-ET
             </span>
             <h2 className="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-              CTNET Steering Committee
+              Steering Committee Members
             </h2>
-            <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-slate-500 md:text-lg">
-              Meet the multidisciplinary CTNET research group working together to deliver rigorous, ethical, and high-impact clinical research.
-            </p>
           </div>
         </div>
 
         {teamMembers.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-8 py-16 text-center text-slate-500">
-            No team members yet. Please add members from the admin panel using "Add CTNET Member."
+            No team members yet. Please add members from the admin panel using
+            "Add CTNET Member."
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {teamMembers.map((member) => (
-              <div key={member.id}>
-                <TeamMemberCard member={member} />
-              </div>
+          <div className="space-y-10">
+            {sections.map((section) => (
+              <section key={section.id} className="border-b border-slate-200 pb-6 last:border-b-0">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">
+                  {section.title}
+                </h3>
+                {section.members.length === 0 ? (
+                  <p className="text-slate-500 text-sm">
+                    No members assigned to this hierarchy yet.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-200">
+                    {section.members.map((member) => (
+                      <TeamMemberRow key={member.id} member={member} />
+                    ))}
+                  </div>
+                )}
+              </section>
             ))}
           </div>
         )}

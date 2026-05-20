@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS team_members (
   name TEXT NOT NULL,
   member_title TEXT NOT NULL,
   position_role TEXT NOT NULL,
+  hierarchy TEXT NOT NULL DEFAULT 'sc_member',
   description TEXT NOT NULL,
   photo_url TEXT NOT NULL,
   facebook_url TEXT,
