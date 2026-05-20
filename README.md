@@ -1,73 +1,73 @@
-# CTNET: Clinical Trial Network Ethiopia
+﻿# CTNET: Clinical Trial Network Ethiopia
 
-A comprehensive web application designed to manage and disseminate information related to clinical trials, research activities, and healthcare initiatives in Ethiopia. CTNET serves as a centralized platform for researchers, healthcare professionals, volunteers, and the general public to access up-to-date information about ongoing clinical trials, news, events, partnerships, and educational resources.
+A comprehensive web application built for managing clinical trial information, research updates, and community engagement in Ethiopia. CTNET combines a modern React/Vite frontend with a Node.js/Express backend and PostgreSQL database support.
 
 ## Features
 
 ### Public Features
-- **Clinical Trial Registry**: Browse and search registered clinical trials with details including title, phase, status, and dates.
-- **News & Events**: Stay informed with the latest news announcements and upcoming events in both English and Amharic.
-- **Partners Section**: View information about collaborating institutions including universities, banks, and other organizations.
-- **Resources Library**: Access guidelines, directives, online courses, and publications with Google Drive previews.
-- **Team Directory**: Learn about the professionals behind CTNET with detailed profiles.
-- **Volunteer Registration**: Easy form for individuals to register as volunteers for clinical trials.
-- **Contact Form**: Secure way to send inquiries or feedback to the CTNET team.
+- **Clinical Trial Registry**: Browse and search registered clinical trials with details on title, phase, status, and timelines.
+- **News & Events**: Read the latest announcements and upcoming events.
+- **Partners Section**: Display collaborating institutions and partner organizations.
+- **Resources Library**: Share guidelines, directives, documents, and Google Drive previews.
+- **Team Directory**: Showcase the professionals supporting CTNET.
+- **Volunteer Registration**: Let users sign up to participate as volunteers.
+- **Contact Form**: Collect inquiries and feedback from visitors.
 
 ### Admin Features (Protected)
-- **Content Management**: Create, read, update, and delete news articles, events, partners, resources, and team members.
-- **User Administration**: Manage administrator accounts with secure credential handling.
-- **Audit Logging**: Track administrative actions for security and accountability.
-- **Session Management**: Secure admin sessions with automatic timeout and activity tracking.
-- **Volunteer Analytics**: View total volunteer registration count.
-- **Partner Applications**: Review and manage incoming partnership applications.
+- **Content Management**: Create, read, update, and delete news, events, partners, resources, and team member entries.
+- **Admin Authentication**: Secure login and session handling for administrators.
+- **Email Notifications**: Send admin credential emails using SMTP.
+- **Audit Logging**: Record administrative activity to a log file for accountability.
+- **Session Timeout**: Protect admin sessions with idle timeout settings.
+- **Partner Applications**: Receive and review inbound partnership requests.
 
 ## Technology Stack
 
 ### Frontend
-- **React 19** - Modern JavaScript library for building user interfaces
-- **Vite** - Fast build tool and development server
-- **TypeScript** - Typed superset of JavaScript for enhanced code quality
-- **Tailwind CSS** - Utility-first CSS framework for rapid UI development
-- **Framer Motion** - Animation library for enhanced user experience
-- **Lucide React** - Beautifully simple icons
+- **React 19**
+- **Vite 6**
+- **TypeScript**
+- **Tailwind CSS 4**
+- **Lucide React**
+- **motion**
 
 ### Backend
-- **Node.js** - JavaScript runtime environment
-- **Express.js** - Fast, unopinionated, minimalist web framework
-- **PostgreSQL** - Robust, open-source object-relational database system
-- **TypeScript** - For type-safe backend development
+- **Node.js**
+- **Express.js**
+- **PostgreSQL**
+- **TypeScript**
+- **Nodemailer**
 
-### Key Dependencies
-- `@google/genai` - Google AI integration
-- `bcryptjs` - Password hashing for security
-- `jsonwebtoken` - Authentication token handling
-- `nodemailer` - Email sending functionality
-- `dotenv` - Environment variable management
-- `lucide-react` - Icon set
-- `motion` - Animation library
+### Key Packages
+- `@google/genai`
+- `@neondatabase/serverless`
+- `bcryptjs`
+- `jsonwebtoken`
+- `dotenv`
+- `nodemailer`
+- `pg`
 
 ## Installation and Setup
 
 ### Prerequisites
-- Node.js (v18 or higher)
+- Node.js v18 or newer
 - PostgreSQL database
 - Git
 
-### Step-by-Step Installation
+### Setup
 
-1. **Clone the repository**
+1. Clone the repository:
    ```bash
    git clone https://github.com/your-username/ctnet-ethiopia.git
    cd ctnet-ethiopia
    ```
 
-2. **Install dependencies**
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-3. **Configure environment variables**
-   Create a `.env` file in the root directory based on `.env.example`:
+3. Configure environment variables by creating a `.env` file in the project root:
    ```env
    DATABASE_URL=your_postgresql_connection_string
    SMTP_HOST=your_smtp_host
@@ -76,129 +76,88 @@ A comprehensive web application designed to manage and disseminate information r
    SMTP_PASS=your_smtp_password
    SMTP_FROM=no-reply@ctn-et.org
    APP_NAME=CTNET
+   PGSSL=false
+   SESSION_DEBUG=false
+   AUDIT_LOG_PATH=./logs/ctn-et-audit-log.txt
    ```
 
-   Note: For development, you can use the provided `.env.example` as a starting point.
-
-4. **Database Setup**
-   The application will automatically initialize the database schema on first startup. Ensure your PostgreSQL server is running and the `DATABASE_URL` points to a valid database.
-
-5. **Start the development server**
+4. Start the development server:
    ```bash
    npm run dev
    ```
 
-   The application will be available at `http://localhost:3000`.
+   The app should be available at `http://localhost:3000`.
 
-6. **Production Build**
+5. Build for production:
    ```bash
    npm run build
    npm run preview
    ```
 
-## API Endpoints
+## API Overview
 
 ### Public Endpoints
-- `GET /api/health` - Health check
-- `GET /api/news` - Retrieve all news articles
-- `GET /api/events` - Retrieve all events
-- `GET /api/partners` - Retrieve all partners
-- `GET /api/resources` - Retrieve all resources
-- `GET /api/team-members` - Retrieve all team members
-- `GET /api/trials` - Retrieve all clinical trials
-- `GET /api/volunteers/count` - Get total volunteer count
-- `POST /api/contact` - Submit a contact form message
-- `POST /api/volunteers` - Register a new volunteer
-- `POST /api/partner-applications` - Submit a partnership application
+- `GET /api/health`
+- `GET /api/news`
+- `GET /api/events`
+- `GET /api/partners`
+- `GET /api/resources`
+- `GET /api/team-members`
+- `GET /api/trials`
+- `GET /api/volunteers/count`
+- `POST /api/contact`
+- `POST /api/volunteers`
+- `POST /api/partner-applications`
 
-### Admin Endpoints (Require Admin Authentication)
-- `GET /api/auth/me` - Get current user session
-- `POST /api/auth/login` - Admin login
-- `POST /api/auth/logout` - Admin logout
-- `POST /api/auth/signup` - Create new user account
-- `POST /api/auth/update-password` - Change password
-- `POST /api/admin/news` - Create news article
-- `DELETE /api/admin/news/:id` - Delete news article
-- `POST /api/admin/events` - Create event
-- `DELETE /api/admin/events/:id` - Delete event
-- `POST /api/admin/partners` - Create partner
-- `DELETE /api/admin/partners/:id` - Delete partner
-- `POST /api/admin/resources` - Create resource
-- `DELETE /api/admin/resources/:id` - Delete resource
-- `POST /api/admin/team-members` - Create team member
-- `DELETE /api/admin/team-members/:id` - Delete team member
-- `GET /api/admin/contacts` - Retrieve contact messages
-- `GET /api/admin/partner-applications` - Retrieve partnership applications
-- `GET /api/admin/notifications` - Get unread contact and application counts
-- `GET /api/admin/admins` - List administrator accounts
-- `POST /api/admin/add` - Add new administrator
-- `DELETE /api/admin/admins/:id` - Delete administrator
-
-## Usage
-
-### For General Users
-1. Visit the homepage to see an overview of current trials, news, and events.
-2. Navigate to specific sections using the menu:
-   - **Trials**: Browse registered clinical trials
-   - **News**: Read latest announcements (available in English and Amharic)
-   - **Events**: View upcoming conferences, workshops, and meetings
-   - **Partners**: Learn about collaborating institutions
-   - **Resources**: Access educational materials and guidelines
-   - **Team**: Meet the CTNET team
-   - **Volunteer**: Register to participate in clinical trials
-   - **Contact**: Send inquiries or feedback
-
-### For Administrators
-1. Navigate to the sign-in page and log in with admin credentials.
-2. Access the admin dashboard via the menu.
-3. Manage content:
-   - Create, edit, or delete news articles, events, partners, resources, and team members.
-4. Manage users:
-   - Add new administrator accounts (credentials sent via email).
-   - View and manage existing administrator accounts.
-5. Monitor activity:
-   - View unread contact messages and partnership applications.
-   - Check audit logs for administrative actions (stored in logs directory).
+### Admin Endpoints
+- `GET /api/auth/me`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `POST /api/auth/signup`
+- `POST /api/auth/update-password`
+- `POST /api/admin/news`
+- `DELETE /api/admin/news/:id`
+- `POST /api/admin/events`
+- `DELETE /api/admin/events/:id`
+- `POST /api/admin/partners`
+- `DELETE /api/admin/partners/:id`
+- `POST /api/admin/resources`
+- `DELETE /api/admin/resources/:id`
+- `POST /api/admin/team-members`
+- `DELETE /api/admin/team-members/:id`
+- `GET /api/admin/contacts`
+- `GET /api/admin/partner-applications`
+- `GET /api/admin/notifications`
+- `GET /api/admin/admins`
+- `POST /api/admin/add`
+- `DELETE /api/admin/admins/:id`
 
 ## Project Structure
 
 ```
 ctnet-et-updated-/
-├── src/                 # Frontend source code
-│   ├── components/      # React components
-│   ├── types/           # TypeScript type definitions
-│   ├── translations/    # Language translation files
-│   └── App.tsx          # Main application component
-├── server.ts            # Backend server implementation
-├── package.json         # Project dependencies and scripts
-├── tsconfig.json        # TypeScript configuration
-├── vite.config.ts       # Vite configuration
-├── .env.example         # Example environment variables
-├── README.md            # This file
-└── ...                  # Other configuration files
+├── apis/               # API helper scripts
+├── pages/              # Page-level routing and demo pages
+├── src/                # Frontend source code
+│   ├── components/     # React components
+│   ├── images/         # Image assets
+│   ├── App.tsx         # Main application component
+│   ├── main.tsx        # Frontend entrypoint
+│   └── translations.ts # Language support data
+├── server.ts           # Backend server implementation
+├── package.json        # Scripts and dependencies
+├── tsconfig.json       # TypeScript configuration
+├── vite.config.ts      # Vite configuration
+├── schema.sql          # Database schema file
+├── .env               # Local environment variables
+└── README.md           # Project documentation
 ```
 
-## Contributing
-
-We welcome contributions to improve CTNET! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please ensure your code follows the existing style and includes appropriate tests where applicable.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Developer
+- Developed by: **Abrham Molla**
+- LinkedIn: https://www.linkedin.com/in/abrham-molla-6867511b6/
+- Email: abrhammolla4@gmail.com
 
 ## Contact
-
-For inquiries, partnerships, or support, please contact:
+For inquiries, support, or partnership requests:
 - Email: abrhammolla4@gmail.com
-- Website: https://ctn-et.org
-
----
-*Last updated: May 2026*
