@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Facebook, Linkedin, Twitter } from "lucide-react";
+import { Facebook, Linkedin, Twitter, X } from "lucide-react";
 import { Language, TeamMember as TeamMemberType } from "../types";
 
 interface TeamProps {
@@ -14,6 +14,7 @@ interface TeamMemberRowProps {
 
 const TeamMemberRow = ({ member }: TeamMemberRowProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const maxDescriptionLength = 180;
   const isLongDescription = member.description.length > maxDescriptionLength;
   const previewDescription = isLongDescription
@@ -26,55 +27,108 @@ const TeamMemberRow = ({ member }: TeamMemberRowProps) => {
     { key: "linkedin", href: member.linkedin_url, Icon: Linkedin, label: "LinkedIn" },
   ];
 
+  useEffect(() => {
+    if (!isPhotoModalOpen) return;
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsPhotoModalOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", onEscape);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onEscape);
+      document.body.style.overflow = "";
+    };
+  }, [isPhotoModalOpen]);
+
   return (
-    <article className="py-5">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-start gap-4">
-          <img
-            src={member.photo_url}
-            alt={member.name}
-            className="h-20 w-20 rounded-xl object-cover shrink-0"
-            loading="lazy"
-          />
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
-            <p className="text-sm font-semibold text-primary mt-1">
-              {member.member_title}
-            </p>
-            <p className="text-sm text-slate-600 mt-1">{member.position_role}</p>
-            <p className="text-sm text-slate-500 leading-7 mt-3">
-              {isExpanded ? member.description : previewDescription}
-            </p>
-            {isLongDescription && (
-              <button
-                type="button"
-                onClick={() => setIsExpanded((prev) => !prev)}
-                className="text-sm font-semibold text-primary mt-2"
-              >
-                {isExpanded ? "Read Less" : "Read More"}
-              </button>
+    <>
+      <article className="py-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start gap-4">
+            <button
+              type="button"
+              onClick={() => setIsPhotoModalOpen(true)}
+              className="rounded-2xl overflow-hidden shrink-0 focus:outline-none focus:ring-4 focus:ring-primary/25"
+              aria-label={`View full photo of ${member.name}`}
+            >
+              <img
+                src={member.photo_url}
+                alt={member.name}
+                className="h-[7.5rem] w-[7.5rem] rounded-2xl object-cover cursor-zoom-in"
+                loading="lazy"
+              />
+            </button>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
+              <p className="text-sm font-semibold text-primary mt-1">
+                {member.member_title}
+              </p>
+              <p className="text-sm text-slate-600 mt-1">
+                {member.position_role}
+              </p>
+              <p className="text-sm text-slate-500 leading-7 mt-3">
+                {isExpanded ? member.description : previewDescription}
+              </p>
+              {isLongDescription && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded((prev) => !prev)}
+                  className="text-sm font-semibold text-primary mt-2"
+                >
+                  {isExpanded ? "Read Less" : "Read More"}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 md:justify-end">
+            {socialLinks.map(({ key, href, Icon, label }) =>
+              href ? (
+                <a
+                  key={key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="h-9 w-9 rounded-full border border-slate-300 text-slate-600 hover:text-primary hover:border-primary flex items-center justify-center transition-all"
+                >
+                  <Icon size={16} />
+                </a>
+              ) : null,
             )}
           </div>
         </div>
+      </article>
 
-        <div className="flex items-center gap-3 md:justify-end">
-          {socialLinks.map(({ key, href, Icon, label }) =>
-            href ? (
-              <a
-                key={key}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={label}
-                className="h-9 w-9 rounded-full border border-slate-300 text-slate-600 hover:text-primary hover:border-primary flex items-center justify-center transition-all"
-              >
-                <Icon size={16} />
-              </a>
-            ) : null,
-          )}
+      {isPhotoModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${member.name} full photo`}
+          className="fixed inset-0 z-[100] bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setIsPhotoModalOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setIsPhotoModalOpen(false)}
+            className="absolute top-6 right-6 rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-all"
+            aria-label="Close photo preview"
+          >
+            <X size={22} />
+          </button>
+          <img
+            src={member.photo_url}
+            alt={member.name}
+            className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          />
         </div>
-      </div>
-    </article>
+      )}
+    </>
   );
 };
 

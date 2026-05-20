@@ -20,7 +20,9 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
   const [error, setError] = useState('');
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +68,13 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    if (newPassword !== confirmNewPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/auth/update-password', {
@@ -74,11 +83,17 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
         credentials: 'include',
         body: JSON.stringify({ email, newPassword })
       });
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
         alert('Password updated successfully! Please sign in again.');
         setMustChangePassword(false);
+        setNewPassword('');
+        setConfirmNewPassword('');
         await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         setView('signin');
+      } else {
+        setError(data.error || 'Failed to update password');
       }
     } catch (err) {
       setError('Failed to update password');
@@ -96,6 +111,7 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
             <p className="text-slate-500 font-medium">As a new administrator, you must update your temporary password.</p>
           </div>
           <form onSubmit={handlePasswordUpdate} className="space-y-6">
+            {error && <p className="bg-red-50 text-red-500 p-4 rounded-xl text-sm font-bold">{error}</p>}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">New Password</label>
               <div className="relative">
@@ -113,6 +129,26 @@ export default function Auth({ lang, t, mode, setView, onLogin }: AuthProps) {
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
                 >
                   {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Confirm New Password</label>
+              <div className="relative">
+                <input 
+                  type={showConfirmNewPassword ? "text" : "password"} 
+                  required 
+                  value={confirmNewPassword}
+                  onChange={e => setConfirmNewPassword(e.target.value)}
+                  className="w-full px-4 py-4 rounded-2xl border border-slate-200 outline-none pr-12"
+                  placeholder="********"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
+                >
+                  {showConfirmNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
